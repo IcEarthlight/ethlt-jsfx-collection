@@ -1,0 +1,13 @@
+desc:mute
+
+slider1:switch=0<0, 1, 1>Switch
+
+in_pin:left input
+in_pin:right input
+out_pin:left output
+out_pin:right output
+
+@sample
+
+switch < 0.5 ? spl0 = spl1 = 0
+
