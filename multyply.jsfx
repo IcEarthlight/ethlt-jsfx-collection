@@ -1,0 +1,15 @@
+desc: Multyply
+author: Earthlight
+version: 1.0
+
+in_pin:left input
+in_pin:right input
+in_pin:left sidechain
+in_pin:right sidechain
+out_pin:left output
+out_pin:right output
+
+@sample
+
+spl0 *= spl2;
+spl1 *= spl3;
