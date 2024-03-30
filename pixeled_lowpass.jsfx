@@ -1,0 +1,50 @@
+desc: Pixeled Lowpass
+author: Earthlight
+version: 1.0
+
+slider1:freq=30000<20,30000,1:log=3000>Frequency (Hz)
+
+in_pin:left input
+in_pin:right input
+out_pin:left output
+out_pin:right output
+
+@init
+bf_pos = 0;
+bf_size = 2 * floor(srate / 10);
+freembuf(bf_size);
+
+@slider
+last_amount = amount;
+amount = freq <= 12000 ?
+    srate / freq :
+    1 + (srate/12000-1) * sqr((30000 - freq) / 18000);
+
+@block
+d_amount = (amount - last_amount) / samplesblock;
+
+@sample
+last_amount > 1 ? (
+    bf_pos[0] = spl0;
+    bf_pos[1] = spl1;
+
+    i = bf_pos;
+    sl = 0;
+    sr = 0;
+
+    loop(floor(last_amount),
+        sl += i[0];
+        sr += i[1];
+        i <= 0 ? i = bf_size-2 : i -= 2;
+    );
+
+    sl += (last_amount - floor(last_amount)) * i[0];
+    sr += (last_amount - floor(last_amount)) * i[1];
+
+    spl0 = sl / last_amount;
+    spl1 = sr / last_amount;
+
+    (bf_pos += 2) >= bf_size ? bf_pos = 0;
+);
+last_amount += d_amount;
+
