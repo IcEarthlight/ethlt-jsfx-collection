@@ -1,0 +1,244 @@
+desc: Cheese & Bread
+author: Earthlight
+version: 1.0
+
+slider1:threshold=0<-32,0,0.1:log=-6>Threshold (dB)
+slider2:pregain=0<-6,6,0.1>Pre-Gain (dB)
+slider3:atk=0<0,50,0.1>Attack (ms)
+slider4:hold=0.01<0,0.025,0.0001>Hold (ms)
+slider5:rls=25<0,250,0.5>Release (ms)
+slider6:link=0<0,1,1{linked,unlinked}>LR Link
+
+in_pin:left input
+in_pin:right input
+in_pin:left sidechain
+in_pin:right sidechain
+out_pin:left output
+out_pin:right output
+
+@init
+
+lmt_amt = 1;
+lmt_amtl = 1;
+lmt_amtr = 1;
+
+lmt_rls = 25;
+lmt_rls = 1 - 0.05 ^ (1 / (lmt_rls * srate / 1000));
+
+amp = 0;
+ampl = 0;
+ampr = 0;
+
+histbuf = 1000000;
+histpos = 0;
+histsize = 0.5 * srate;
+
+@slider
+
+atk_k = atk == 0 ? 1 : 1 - 0.05 ^ (1 / (atk * srate / 1000));
+rls_k = rls == 0 ? 1 : 1 - 0.05 ^ (1 / (rls * srate / 1000));
+
+rls_hold = hold * srate;
+rls_hold_count = rls_hold;
+rlsl_hold_count = rls_hold;
+rlsr_hold_count = rls_hold;
+
+thr_factor = 2 ^ (threshold / 6);
+prg_factor = 2 ^ (pregain / 6);
+
+@sample
+
+spl0 *= prg_factor;
+spl1 *= prg_factor;
+
+// prelimit original signal
+
+!link ? (
+    spl = max(abs(spl0), abs(spl1));
+
+    //release
+    lmt_amt += lmt_rls * (1 - lmt_amt);
+
+    // attack
+    spl * lmt_amt > 1 ?
+        lmt_amt = 1 / spl;
+    
+    spl0 *= lmt_amt;
+    spl1 *= lmt_amt;
+) : (
+    // release
+    lmt_amtl += lmt_rls * (1 - lmt_amtl);
+    lmt_amtr += lmt_rls * (1 - lmt_amtr);
+
+    // attack
+    abs(spl0) * lmt_amtl > 1 ?
+        lmt_amtl = 1 / abs(spl0);
+    abs(spl1) * lmt_amtr > 1 ?
+        lmt_amtr = 1 / abs(spl1);
+    
+    spl0 *= lmt_amtl;
+    spl1 *= lmt_amtr;
+);
+
+// detect amp of side chain
+
+!link ? (
+    spl = max(abs(spl2), abs(spl3));
+
+
+    amp < spl ? (
+        // attack
+        amp += atk_k * (spl - amp);
+        rls_hold_count = rls_hold;
+    ) : (
+        // release
+        rls_hold_count < 0 ?
+            amp += rls_k * (spl - amp)
+          : rls_hold_count -= 1;
+    );
+
+    comp_amt = max(0, thr_factor - amp);
+    spl0 *= comp_amt;
+    spl1 *= comp_amt;
+
+    histbuf[histpos] = spl0;
+    histbuf[histpos + histsize] = spl1;
+    histbuf[histpos + 2*histsize] = spl2;
+    histbuf[histpos + 3*histsize] = spl3;
+    histbuf[histpos + 4*histsize] = amp;
+    histbuf[histpos + 5*histsize] = amp;
+) : (
+    ampl < abs(spl2) ? (
+        ampl += atk_k * (abs(spl2) - ampl);
+        rlsl_hold_count = rls_hold;
+    ) : (
+        rlsl_hold_count < 0 ?
+            ampl += rls_k * (abs(spl2) - ampl)
+          : rlsl_hold_count -= 1;
+    );
+    ampr < abs(spl3) ? (
+        ampr += atk_k * (abs(spl3) - ampr);
+        rlsr_hold_count = rls_hold;
+    ) : (
+        rlsr_hold_count < 0 ?
+            ampr += rls_k * (abs(spl3) - ampr)
+          : rlsr_hold_count -= 1;
+    );
+
+    spl0 *= max(0, thr_factor - ampl);
+    spl1 *= max(0, thr_factor - ampr);
+
+    histbuf[histpos] = spl0;
+    histbuf[histpos + histsize] = spl1;
+    histbuf[histpos + 2*histsize] = spl2;
+    histbuf[histpos + 3*histsize] = spl3;
+    histbuf[histpos + 4*histsize] = ampl;
+    histbuf[histpos + 5*histsize] = ampr;
+);
+
+spl0 /= thr_factor;
+spl1 /= thr_factor;
+
+histpos += 1;
+histpos >= histsize ? histpos=0;
+
+@gfx 400 100
+
+top = 0;
+left = 0;
+right = gfx_w;
+bottom = gfx_h;
+
+gscale = gfx_w/histsize;
+gbuf = histbuf;
+gscale2 = gfx_h;
+gp = 0;
+
+// draw the sidechain waveshape (0, 1), sidechain amp (2, 3), and processed signal (4, 5) at
+// the top
+
+loop(6,
+    ga = 0;
+    offs = 0;
+
+    gp < 2 ? (
+        gfx_set(0.1, 0.3, 0.6, 0.5);
+        loop(histsize,
+            gv = abs(gbuf[offs]);
+            offs += 1;
+            offs >= histsize ? offs = 0;
+            gx = left + ga*gscale;
+            gy = (1 - thr_factor + gv) * gscale2;
+            (ga && gv != 0) ? gfx_lineto(gx, gy, 1) : ( gfx_x = gx; gfx_y = gy; );
+            ga += 1;
+        );
+
+    ) : (
+        gp < 4 ?
+            gfx_set(0.5, 0.5, 0.3, 0.5)
+          : gfx_set(0.5, 0.7, 0.4, 0.6);
+        
+        loop(histsize,
+            gv = abs(gbuf[offs]);
+            offs += 1;
+            offs >= histsize ? offs = 0;
+            gx = left + ga*gscale;
+            gy = gfx_h - gv*gscale2;
+            ga ? gfx_lineto(gx, gy, 1) : ( gfx_x = gx; gfx_y = gy; );
+            ga += 1;
+        );
+    );
+
+    gp += 1;
+    gbuf += histsize;
+);
+
+// draw the peaks that is over the threshold
+
+gfx_set(0.9, 0.2, 0.1, 1.0);
+
+ga = 0;
+offs = 0;
+loop(histsize,
+    gv = max(0, abs(histbuf[offs] + histbuf[offs + 2*histsize]) - thr_factor);
+    offs += 1;
+    offs >= histsize ? offs = 0;
+    gx = left + ga*gscale;
+    gy = (1 - thr_factor) * gfx_h - gv*gscale2;
+
+    gy >= 0 ? (
+        (ga && gv != 0) ? gfx_lineto(gx, gy, 1);
+    ) : (
+        gfx_y += gfx_h;
+        (ga && gv != 0) ? gfx_lineto(gx, gy+gfx_h, 1);
+    );
+    gfx_x = gx; gfx_y = gy;
+
+    ga += 1;
+);
+
+ga = 0;
+offs = 0;
+loop(histsize,
+    gv = max(0, abs(histbuf[offs + histsize] + histbuf[offs + 3*histsize]) - thr_factor);
+    offs += 1;
+    offs >= histsize ? offs = 0;
+    gx = left + ga*gscale;
+    gy = (1 - thr_factor) * gfx_h - gv*gscale2;
+
+    gy >= 0 ? (
+        (ga && gv != 0) ? gfx_lineto(gx, gy, 1);
+    ) : (
+        gfx_y += gfx_h;
+        (ga && gv != 0) ? gfx_lineto(gx, gy+gfx_h, 1);
+    );
+    gfx_x = gx; gfx_y = gy;
+
+    ga += 1;
+);
+
+// draw the threshold
+
+gfx_set(1.0, 1.0, 1.0, 0.3);
+gfx_line(0, (1-thr_factor) * gfx_h,
+         gfx_w, (1-thr_factor) * gfx_h, 0);
