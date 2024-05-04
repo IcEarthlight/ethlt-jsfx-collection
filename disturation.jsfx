@@ -1,6 +1,6 @@
 desc: Disturation
 author: Earthlight
-version: 1.0
+version: 1.1
 
 slider1:pregain=0<-12,12,0.1>Pre-Gain (dB)
 slider2:dist=0<0,1,0.01>Distortion Amount
@@ -68,3 +68,72 @@ satr ? (
     spl0 = sin(spl0 * last_satr / 2 * $pi) / temp1;
     spl1 = sin(spl1 * last_satr / 2 * $pi) / temp1;
 );
+
+@gfx 432 240
+
+gfxSize = min(gfx_w, gfx_h);
+
+gfx_set(0.1, 0.1, 0.12, 1);
+gfx_x = gfx_y = 0;
+gfx_rectto(gfx_w, gfx_h);
+
+gfx_set(1, 1, 1, 0.5);
+gfx_x = gfx_w / 2; gfx_y = 0;
+gfx_lineto(gfx_x, gfx_h, 0);
+gfx_x = 0; gfx_y = gfx_h / 2;
+gfx_lineto(gfx_w, gfx_y, 0);
+
+gfx_set(1, 0.3, 0.1, 0.2);
+gfx_x = (gfx_w + neg_peak * gfx_h) / 2; gfx_y = 0;
+gfx_rectto((gfx_w + pos_peak * gfx_h) / 2, gfx_h);
+
+gfx_h > 100 ? (
+    gfx_set(1, 1, 1, 0.7);
+    gfx_x = (gfx_w + gfxSize) / 2 - 20; gfx_y = gfx_h / 2;
+    gfx_drawchar($'I');
+    gfx_drawchar($'N');
+    gfx_x = gfx_w/2 + 2; gfx_y = 0;
+    gfx_drawchar($'O');
+    gfx_drawchar($'U');
+    gfx_drawchar($'T');
+);
+
+gfx_set(1, 1, 1, 0.8);
+gfx_x = 0; gfx_y = gfxSize;
+x_max = 1 / gfxSize * gfx_w;
+x = -x_max;
+
+while (
+    y = x;
+    sclp ? (
+        abs(y) > sclp_fac ? y = (
+            y > 0 ? (-exp(-(y - sclp_fac) / (1 - sclp_fac)) + 1) * (1 - sclp_fac) + sclp_fac
+                  : ( exp( (y + sclp_fac) / (1 - sclp_fac)) - 1) * (1 - sclp_fac) - sclp_fac
+        );
+    ) : (
+        y = min(max(y, -1), 1);
+    );
+    temp0_ = 2 * dist / (1.01 - dist);
+    y = (1 + temp0_) * y / (1 + temp0_*abs(y));
+    satr ? y = sin(y * satr / 2 * $pi) / sin(satr / 2 * $pi);
+    x != -x_max ? gfx_lineto((gfx_w + x*gfx_h) / 2, (-y+1)/2 * gfx_h, 1)
+                : ( gfx_x = (gfx_w + x*gfx_h) / 2; gfx_y = (-y+1)/2 * gfx_h; );
+    (x += 0.01) < x_max;
+);
+
+gfx_set(0.2, 0.2, 0.24, 0.5);
+gfx_x = 0; gfx_y = 0;
+gfx_rectto((gfx_w - gfx_h) / 2, gfx_h);
+gfx_x = (gfx_w + gfx_h) / 2; gfx_y = 0;
+gfx_rectto(gfx_w, gfx_h);
+
+gfx_set(1, 0.3, 0.1, 0.05);
+neg_peak < -1 ? (
+    gfx_x = (gfx_w + neg_peak * gfx_h) / 2; gfx_y = 0;
+    gfx_rectto((gfx_w - gfx_h) / 2, gfx_h);
+);
+pos_peak > 1 ? (
+    gfx_x = (gfx_w + gfx_h) / 2; gfx_y = 0;
+    gfx_rectto((gfx_w + pos_peak * gfx_h) / 2, gfx_h);
+);
+pos_peak = neg_peak = 0;
