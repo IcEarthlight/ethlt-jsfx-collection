@@ -1,0 +1,306 @@
+desc: Vibrato
+author: Earthlight
+version: 1.0
+
+slider1:trem_amt=0<0,1,0.01>Tremolo Amount
+slider2:trem_peak=3<-6,6,0.1>Tremolo Peak (dB)
+slider3:trem_rate_mode=0<0,2,1{Sync,Free,Note}>Tremolo Rate Mode
+slider4:trem_rate_sync=7<0,20,1{1/64t,1/64,1/32t,1/64.,1/32,1/16t,1/32.,1/16,1/8t,1/16.,1/8,1/4t,1/8.,1/4,1/2t,1/4.,1/2,1t,1/2.,1,1.}>Tremolo Rate (Sync)
+slider5:trem_rate_free=15<1,200,0.01:log=15>Tremolo Rate (Hz)
+slider6:trem_rate_note=21<0,127,1{C0,C#0,D0,D#0,E0,F0,F#0,G0,G#0,A0,A#0,B0,C1,C#1,D1,D#1,E1,F1,F#1,G1,G#1,A1,A#1,B1,C2,C#2,D2,D#2,E2,F2,F#2,G2,G#2,A2,A#2,B2,C3,C#3,D3,D#3,E3,F3,F#3,G3,G#3,A3,A#3,B3,C4,C#4,D4,D#4,E4,F4,F#4,G4,G#4,A4,A#4,B4,C5,C#5,D5,D#5,E5,F5,F#5,G5,G#5,A5,A#5,B5,C6,C#6,D6,D#6,E6,F6,F#6,G6,G#6,A6,A#6,B6,C7,C#7,D7,D#7,E7,F7,F#7,G7,G#7,A7,A#7,B7,C8,C#8,D8,D#8,E8,F8,F#8,G8,G#8,A8,A#8,B8,C9,C#9,D9,D#9,E9,F9,F#9,G9,G#9,A9,A#9,B9,C10,C#10,D10,D#10,E10,F10,F#10,G10}>Tremolo Rate (note)
+slider7:trem_lfo_shape=0<0,4,1{Sine,Triangle,Square,Saw,Ramp}>Tremolo LFO Shape
+slider8:trem_lfo_phase=0<0,345,15>Tremolo LFO Phase
+slider9:trem_lfo_stereo=0<-1,1,0.01>Tremolo LFO Stereo
+
+slider10:vib_amt=0<0,12,0.05:log=1.5>Vibrato Amount (Semitones)
+slider11:vib_rate_mode=0<0,2,1{Sync,Free,Note}>Vibrato Rate Mode
+slider12:vib_rate_sync=7<0,20,1{1/64t,1/64,1/32t,1/64.,1/32,1/16t,1/32.,1/16,1/8t,1/16.,1/8,1/4t,1/8.,1/4,1/2t,1/4.,1/2,1t,1/2.,1,1.}>Vibrato Rate (Sync)
+slider13:vib_rate_free=15<1,200,0.01:log=15>Vibrato Rate (Hz)
+slider14:vib_rate_note=21<0,127,1{C0,C#0,D0,D#0,E0,F0,F#0,G0,G#0,A0,A#0,B0,C1,C#1,D1,D#1,E1,F1,F#1,G1,G#1,A1,A#1,B1,C2,C#2,D2,D#2,E2,F2,F#2,G2,G#2,A2,A#2,B2,C3,C#3,D3,D#3,E3,F3,F#3,G3,G#3,A3,A#3,B3,C4,C#4,D4,D#4,E4,F4,F#4,G4,G#4,A4,A#4,B4,C5,C#5,D5,D#5,E5,F5,F#5,G5,G#5,A5,A#5,B5,C6,C#6,D6,D#6,E6,F6,F#6,G6,G#6,A6,A#6,B6,C7,C#7,D7,D#7,E7,F7,F#7,G7,G#7,A7,A#7,B7,C8,C#8,D8,D#8,E8,F8,F#8,G8,G#8,A8,A#8,B8,C9,C#9,D9,D#9,E9,F9,F#9,G9,G#9,A9,A#9,B9,C10,C#10,D10,D#10,E10,F10,F#10,G10}>Vibrato Rate (note)
+slider15:vib_lfo_shape=0<0,4,1{Sine,Triangle,Square,Saw,Ramp}>Vibrato LFO Shape
+slider16:vib_lfo_phase=0<0,345,15>Vibrato LFO Phase
+slider17:vib_lfo_stereo=0<-1,1,0.01>Vibrato LFO Stereo
+
+in_pin:left input
+in_pin:right input
+out_pin:left output
+out_pin:right output
+
+@init
+
+function sineLFO(x)     ( (cos(x * 2*$pi) + 1) / 2; );
+function triangleLFO(x) ( x < 0.5 ? 1 - 2 * x : 2 * x - 1 );
+function squareLFO(x)   ( x < 0.5 ? 1 : 0; );
+function sawLFO(x)      ( 1 - x; );
+function rampLFO(x)     ( x; );
+
+function sineItg(x)     ( (cos(x * 2*$pi) + 1) / 2; );
+function triangleItg(x) ( x < 0.25 ? 8 * x^2
+                        : x < 0.75 ? -8 * (x - 0.5) ^ 2 + 1
+                        : 8 * (x - 1) ^ 2);
+function squareItg(x)   ( x < 0.5 ? 2 * x : 2 - 2 * x; );
+function sawItg(x)      ( x < 0.5 ? 4 * x^2
+                        : 4 * x^2 - 8 * x + 4; );
+function rampItg(x)     ( 4 * x - 4 * x^2; );
+
+function frac(x, y)   ( (x + y) - floor(x + y); );
+
+histbuf = 1000000;
+histpos = 0;
+histsize = 0.5 * srate;
+
+function getLastSpl0(n) (
+    pos0 = floor(histpos - n);
+    pos1 = pos0 + 1;
+    k = histpos - n - pos0;
+
+    pos0 < 0 ? pos0 += histsize;
+    pos1 < 0 ? pos1 += histsize;
+
+    (1 - k) * histbuf[pos0] + k * histbuf[pos1];
+);
+
+function getLastSpl1(n) (
+    pos0 = floor(histpos - n);
+    pos1 = pos0 + 1;
+    k = histpos - n - pos0;
+
+    pos0 < 0 ? pos0 += histsize;
+    pos1 < 0 ? pos1 += histsize;
+
+    (1 - k) * histbuf[pos0 + histsize] + k * histbuf[pos1 + histsize];
+);
+
+last_tempo = tempo;
+last_trem_amt = trem_amt;
+last_trem_lfo_phase = trem_lfo_phase;
+last_trem_lfo_stereo = trem_lfo_stereo;
+last_vib_spl_amt = 0;
+last_vib_lfo_phase = vib_lfo_phase;
+last_vib_lfo_stereo = vib_lfo_stereo;
+
+trem_spl_count = 0;
+vib_spl_count = 0;
+
+@slider
+
+trem_peak_factor = 2 ^ (trem_peak / 6);
+
+trem_rate_mode == 0 ? (
+    slider_show(trem_rate_sync, 1);
+    slider_show(trem_rate_free, 0);
+    slider_show(trem_rate_note, 0);
+
+    trem_rate_sync == 0    ? trem_spl_num = srate * 60 / tempo / 24
+    : trem_rate_sync == 1  ? trem_spl_num = srate * 60 / tempo / 16
+    : trem_rate_sync == 2  ? trem_spl_num = srate * 60 / tempo / 12
+    : trem_rate_sync == 3  ? trem_spl_num = srate * 60 / tempo / (32/3)
+    : trem_rate_sync == 4  ? trem_spl_num = srate * 60 / tempo / 8
+    : trem_rate_sync == 5  ? trem_spl_num = srate * 60 / tempo / 6
+    : trem_rate_sync == 6  ? trem_spl_num = srate * 60 / tempo / (16/3)
+    : trem_rate_sync == 7  ? trem_spl_num = srate * 60 / tempo / 4
+    : trem_rate_sync == 8  ? trem_spl_num = srate * 60 / tempo / 3
+    : trem_rate_sync == 9  ? trem_spl_num = srate * 60 / tempo / (8/3)
+    : trem_rate_sync == 10 ? trem_spl_num = srate * 60 / tempo / 2
+    : trem_rate_sync == 11 ? trem_spl_num = srate * 60 / tempo / (3/2)
+    : trem_rate_sync == 12 ? trem_spl_num = srate * 60 / tempo / (4/3)
+    : trem_rate_sync == 13 ? trem_spl_num = srate * 60 / tempo
+    : trem_rate_sync == 14 ? trem_spl_num = srate * 60 / tempo * 4/3
+    : trem_rate_sync == 15 ? trem_spl_num = srate * 60 / tempo * 3/2
+    : trem_rate_sync == 16 ? trem_spl_num = srate * 60 / tempo * 2
+    : trem_rate_sync == 17 ? trem_spl_num = srate * 60 / tempo * 8/3
+    : trem_rate_sync == 18 ? trem_spl_num = srate * 60 / tempo * 3
+    : trem_rate_sync == 19 ? trem_spl_num = srate * 60 / tempo * 4
+    : trem_rate_sync == 20 ? trem_spl_num = srate * 60 / tempo * 16/3;
+    
+
+) : trem_rate_mode == 1 ? (
+    slider_show(trem_rate_sync, 0);
+    slider_show(trem_rate_free, 1);
+    slider_show(trem_rate_note, 0);
+    trem_spl_num = srate / trem_rate_free;
+
+) : trem_rate_mode == 2 ? (
+    slider_show(trem_rate_sync, 0);
+    slider_show(trem_rate_free, 0);
+    slider_show(trem_rate_note, 1);
+    trem_freq = 2 ^ ((trem_rate_note - 57) / 12) * 440;
+    trem_spl_num = srate / trem_freq;
+);
+
+vib_rate_mode == 0 ? (
+    slider_show(vib_rate_sync, 1);
+    slider_show(vib_rate_free, 0);
+    slider_show(vib_rate_note, 0);
+
+    vib_rate_sync == 0    ? vib_spl_num = srate * 60 / tempo / 24
+    : vib_rate_sync == 1  ? vib_spl_num = srate * 60 / tempo / 16
+    : vib_rate_sync == 2  ? vib_spl_num = srate * 60 / tempo / 12
+    : vib_rate_sync == 3  ? vib_spl_num = srate * 60 / tempo / (32/3)
+    : vib_rate_sync == 4  ? vib_spl_num = srate * 60 / tempo / 8
+    : vib_rate_sync == 5  ? vib_spl_num = srate * 60 / tempo / 6
+    : vib_rate_sync == 6  ? vib_spl_num = srate * 60 / tempo / (16/3)
+    : vib_rate_sync == 7  ? vib_spl_num = srate * 60 / tempo / 4
+    : vib_rate_sync == 8  ? vib_spl_num = srate * 60 / tempo / 3
+    : vib_rate_sync == 9  ? vib_spl_num = srate * 60 / tempo / (8/3)
+    : vib_rate_sync == 10 ? vib_spl_num = srate * 60 / tempo / 2
+    : vib_rate_sync == 11 ? vib_spl_num = srate * 60 / tempo / (3/2)
+    : vib_rate_sync == 12 ? vib_spl_num = srate * 60 / tempo / (4/3)
+    : vib_rate_sync == 13 ? vib_spl_num = srate * 60 / tempo
+    : vib_rate_sync == 14 ? vib_spl_num = srate * 60 / tempo * 4/3
+    : vib_rate_sync == 15 ? vib_spl_num = srate * 60 / tempo * 3/2
+    : vib_rate_sync == 16 ? vib_spl_num = srate * 60 / tempo * 2
+    : vib_rate_sync == 17 ? vib_spl_num = srate * 60 / tempo * 8/3
+    : vib_rate_sync == 18 ? vib_spl_num = srate * 60 / tempo * 3
+    : vib_rate_sync == 19 ? vib_spl_num = srate * 60 / tempo * 4
+    : vib_rate_sync == 20 ? vib_spl_num = srate * 60 / tempo * 16/3;
+    
+
+) : vib_rate_mode == 1 ? (
+    slider_show(vib_rate_sync, 0);
+    slider_show(vib_rate_free, 1);
+    slider_show(vib_rate_note, 0);
+    vib_spl_num = srate / vib_rate_free;
+
+) : vib_rate_mode == 2 ? (
+    slider_show(vib_rate_sync, 0);
+    slider_show(vib_rate_free, 0);
+    slider_show(vib_rate_note, 1);
+    vib_freq = 2 ^ ((vib_rate_note - 57) / 12) * 440;
+    vib_spl_num = srate / vib_freq;
+);
+
+vib_spl_amt = vib_spl_num / 2 * (1 - 2 ^ (-vib_amt/12));
+
+@block
+
+tempo != last_tempo ? (
+    last_tempo = tempo;
+    trem_rate_mode == 0 ? (
+        trem_rate_sync == 0    ? trem_spl_num = srate * 60 / tempo / 24
+        : trem_rate_sync == 1  ? trem_spl_num = srate * 60 / tempo / 16
+        : trem_rate_sync == 2  ? trem_spl_num = srate * 60 / tempo / 12
+        : trem_rate_sync == 3  ? trem_spl_num = srate * 60 / tempo / (32/3)
+        : trem_rate_sync == 4  ? trem_spl_num = srate * 60 / tempo / 8
+        : trem_rate_sync == 5  ? trem_spl_num = srate * 60 / tempo / 6
+        : trem_rate_sync == 6  ? trem_spl_num = srate * 60 / tempo / (16/3)
+        : trem_rate_sync == 7  ? trem_spl_num = srate * 60 / tempo / 4
+        : trem_rate_sync == 8  ? trem_spl_num = srate * 60 / tempo / 3
+        : trem_rate_sync == 9  ? trem_spl_num = srate * 60 / tempo / (8/3)
+        : trem_rate_sync == 10 ? trem_spl_num = srate * 60 / tempo / 2
+        : trem_rate_sync == 11 ? trem_spl_num = srate * 60 / tempo / (3/2)
+        : trem_rate_sync == 12 ? trem_spl_num = srate * 60 / tempo / (4/3)
+        : trem_rate_sync == 13 ? trem_spl_num = srate * 60 / tempo
+        : trem_rate_sync == 14 ? trem_spl_num = srate * 60 / tempo * 4/3
+        : trem_rate_sync == 15 ? trem_spl_num = srate * 60 / tempo * 3/2
+        : trem_rate_sync == 16 ? trem_spl_num = srate * 60 / tempo * 2
+        : trem_rate_sync == 17 ? trem_spl_num = srate * 60 / tempo * 8/3
+        : trem_rate_sync == 18 ? trem_spl_num = srate * 60 / tempo * 3
+        : trem_rate_sync == 19 ? trem_spl_num = srate * 60 / tempo * 4
+        : trem_rate_sync == 20 ? trem_spl_num = srate * 60 / tempo * 16/3;
+    );
+    
+    vib_rate_mode == 0 ? (
+        vib_rate_sync == 0    ? vib_spl_num = srate * 60 / tempo / 24
+        : vib_rate_sync == 1  ? vib_spl_num = srate * 60 / tempo / 16
+        : vib_rate_sync == 2  ? vib_spl_num = srate * 60 / tempo / 12
+        : vib_rate_sync == 3  ? vib_spl_num = srate * 60 / tempo / (32/3)
+        : vib_rate_sync == 4  ? vib_spl_num = srate * 60 / tempo / 8
+        : vib_rate_sync == 5  ? vib_spl_num = srate * 60 / tempo / 6
+        : vib_rate_sync == 6  ? vib_spl_num = srate * 60 / tempo / (16/3)
+        : vib_rate_sync == 7  ? vib_spl_num = srate * 60 / tempo / 4
+        : vib_rate_sync == 8  ? vib_spl_num = srate * 60 / tempo / 3
+        : vib_rate_sync == 9  ? vib_spl_num = srate * 60 / tempo / (8/3)
+        : vib_rate_sync == 10 ? vib_spl_num = srate * 60 / tempo / 2
+        : vib_rate_sync == 11 ? vib_spl_num = srate * 60 / tempo / (3/2)
+        : vib_rate_sync == 12 ? vib_spl_num = srate * 60 / tempo / (4/3)
+        : vib_rate_sync == 13 ? vib_spl_num = srate * 60 / tempo
+        : vib_rate_sync == 14 ? vib_spl_num = srate * 60 / tempo * 4/3
+        : vib_rate_sync == 15 ? vib_spl_num = srate * 60 / tempo * 3/2
+        : vib_rate_sync == 16 ? vib_spl_num = srate * 60 / tempo * 2
+        : vib_rate_sync == 17 ? vib_spl_num = srate * 60 / tempo * 8/3
+        : vib_rate_sync == 18 ? vib_spl_num = srate * 60 / tempo * 3
+        : vib_rate_sync == 19 ? vib_spl_num = srate * 60 / tempo * 4
+        : vib_rate_sync == 20 ? vib_spl_num = srate * 60 / tempo * 16/3;
+    );
+
+    vib_spl_amt = vib_spl_num / 2 * (1 - 2 ^ (-vib_amt/12));
+);
+
+d_trem_amt        = (trem_amt        - last_trem_amt)        / samplesblock;
+d_trem_lfo_phase  = (trem_lfo_phase  - last_trem_lfo_phase)  / samplesblock;
+d_trem_lfo_stereo = (trem_lfo_stereo - last_trem_lfo_stereo) / samplesblock;
+d_vib_spl_amt     = (vib_spl_amt     - last_vib_spl_amt)     / samplesblock;
+d_vib_lfo_phase   = (vib_lfo_phase   - last_vib_lfo_phase)   / samplesblock;
+d_vib_lfo_stereo  = (vib_lfo_stereo  - last_vib_lfo_stereo)  / samplesblock;
+
+d_trem_lfo_phase > 180 ? d_trem_lfo_phase -= 360;
+d_vib_lfo_phase  > 180 ? d_vib_lfo_phase  -= 360;
+
+@sample
+
+// smoothen params
+
+last_trem_amt        += d_trem_amt;
+last_trem_lfo_phase  += d_trem_lfo_phase;
+last_trem_lfo_stereo += d_trem_lfo_stereo;
+last_vib_spl_amt     += d_vib_spl_amt;
+last_vib_lfo_phase   += d_vib_lfo_phase;
+last_vib_lfo_stereo  += d_vib_lfo_stereo;
+
+last_trem_lfo_phase >= 360 ? last_trem_lfo_phase -= 360
+  : last_trem_lfo_phase < 0 ? last_trem_lfo_phase += 360;
+last_vib_lfo_phase >= 360 ? last_vib_lfo_phase -= 360
+  : last_vib_lfo_phase < 0 ? last_vib_lfo_phase += 360;
+
+// update variables
+
+histbuf[histpos] = spl0;
+histbuf[histpos + histsize] = spl1;
+
+// apply vibrato
+
+phasel = frac(vib_spl_count / vib_spl_num, last_vib_lfo_phase / 360);
+phaser = frac(vib_spl_count / vib_spl_num, last_vib_lfo_phase / 360 + last_vib_lfo_stereo / 2);
+
+vib_lfo_shape == 0 ? (
+    spl0 = getLastSpl0(last_vib_spl_amt * sineItg(phasel));
+    spl1 = getLastSpl1(last_vib_spl_amt * sineItg(phaser));
+) : vib_lfo_shape == 1 ? (
+    spl0 = getLastSpl0(last_vib_spl_amt * triangleItg(phasel));
+    spl1 = getLastSpl1(last_vib_spl_amt * triangleItg(phaser));
+) : vib_lfo_shape == 2 ? (
+    spl0 = getLastSpl0(last_vib_spl_amt * squareItg(phasel));
+    spl1 = getLastSpl1(last_vib_spl_amt * squareItg(phaser));
+) : vib_lfo_shape == 3 ? (
+    spl0 = getLastSpl0(last_vib_spl_amt * sawItg(phasel));
+    spl1 = getLastSpl1(last_vib_spl_amt * sawItg(phaser));
+) : vib_lfo_shape == 4 ? (
+    spl0 = getLastSpl0(last_vib_spl_amt * rampItg(phasel));
+    spl1 = getLastSpl1(last_vib_spl_amt * rampItg(phaser));
+);
+
+vib_spl_count += 1;
+vib_spl_count >= vib_spl_num ? vib_spl_count -= vib_spl_num;
+
+// apply tremolo
+
+phasel = frac(trem_spl_count / trem_spl_num, last_trem_lfo_phase / 360);
+phaser = frac(trem_spl_count / trem_spl_num, last_trem_lfo_phase / 360 + last_trem_lfo_stereo / 2);
+spl0_ = spl0 * trem_peak_factor;
+spl1_ = spl1 * trem_peak_factor;
+
+trem_lfo_shape == 0   ? ( spl0_ *= sineLFO(phasel);     spl1_ *= sineLFO(phaser);     )
+: trem_lfo_shape == 1 ? ( spl0_ *= triangleLFO(phasel); spl1_ *= triangleLFO(phaser); )
+: trem_lfo_shape == 2 ? ( spl0_ *= squareLFO(phasel);   spl1_ *= squareLFO(phaser);   )
+: trem_lfo_shape == 3 ? ( spl0_ *= sawLFO(phasel);      spl1_ *= sawLFO(phaser);      )
+: trem_lfo_shape == 4 ? ( spl0_ *= rampLFO(phasel);     spl1_ *= rampLFO(phaser);     );
+
+spl0 += last_trem_amt * (spl0_ - spl0);
+spl1 += last_trem_amt * (spl1_ - spl1);
+
+trem_spl_count += 1;
+trem_spl_count >= trem_spl_num ? trem_spl_count -= trem_spl_num;
+
+histpos += 1;
+histpos >= histsize ? histpos = 0;
