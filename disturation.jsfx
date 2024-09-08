@@ -1,11 +1,12 @@
 desc: Disturation
 author: Earthlight
-version: 1.1
+version: 1.2
 
 slider1:pregain=0<-12,12,0.1>Pre-Gain (dB)
-slider2:dist=0<0,1,0.01>Distortion Amount
-slider3:satr=0<0,1,0.01>Saturation Amount
-slider4:sclp=0<-32,0,0.1:log=-6>Softclip Threshold (dB)
+slider2:asym=0<-6,3,0.01:log=1.5>Asymmetry Amount
+slider3:dist=0<0,1,0.01>Distortion Amount
+slider4:satr=0<0,1,0.01>Saturation Amount
+slider5:sclp=0<-32,0,0.1:log=-6>Softclip Threshold (dB)
 
 @init
 
@@ -13,6 +14,7 @@ pos_peak = 0;
 neg_peak = 0;
 
 last_pregain_fac = 2 ^ (pregain/6);
+last_asym = asym;
 last_dist = dist;
 last_satr = satr;
 last_sclp_fac = 2 ^ (sclp/6);
@@ -27,6 +29,7 @@ lp_coef = (1/3) ^ (1000 / srate);
 @block
 
 d_pregain_fac = (pregain_fac - last_pregain_fac) / samplesblock;
+d_asym = (asym - last_asym) / samplesblock;
 d_dist = (dist - last_dist) / samplesblock;
 d_satr = (satr - last_satr) / samplesblock;
 d_sclp_fac = (sclp_fac - last_sclp_fac) / samplesblock;
@@ -34,6 +37,7 @@ d_sclp_fac = (sclp_fac - last_sclp_fac) / samplesblock;
 @sample
 
 last_pregain_fac += d_pregain_fac;
+last_asym += d_asym;
 last_dist += d_dist;
 last_satr += d_satr;
 last_sclp_fac += d_sclp_fac;
@@ -44,6 +48,11 @@ spl1 *= last_pregain_fac;
 
 pos_peak = max(pos_peak, max(spl0, spl1));
 neg_peak = min(neg_peak, min(spl0, spl1));
+
+last_asym ? (
+    spl0 = (exp(last_asym * spl0) - 1) / last_asym;
+    spl1 = (exp(last_asym * spl1) - 1) / last_asym;
+);
 
 sclp ? (
     abs(spl0) > last_sclp_fac ? spl0 = (
@@ -105,6 +114,7 @@ x = -x_max;
 
 while (
     y = x;
+    asym ? y = (exp(asym * y) - 1) / asym;
     sclp ? (
         abs(y) > sclp_fac ? y = (
             y > 0 ? (-exp(-(y - sclp_fac) / (1 - sclp_fac)) + 1) * (1 - sclp_fac) + sclp_fac
