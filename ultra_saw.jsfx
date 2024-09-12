@@ -1,0 +1,57 @@
+desc: UltraSaw
+author: Earthlight
+
+slider1:unison=16<1,64,1:log=8>Unison
+slider2:detune=0.5<0,2,0.01>Detune
+slider3:midinote=69<1,128, 1>Note
+
+@init
+
+function midi2freq(note)
+(
+    440 * 2 ^ ((note - 69) / 12);
+);
+
+function midi2delta(note)
+(
+    880 * 2 ^ ((note - 69) / 12) / srate;
+);
+
+i = 0;
+while (i < 64)
+(
+    0[i] = rand() - 0.5;
+    i += 1;
+);
+
+@slider
+
+i = 0;
+while (i < unison)
+(
+    64[i] = midi2delta(midinote + detune * (2 * (i + 1) / (unison + 1) - 1));
+    i += 1;
+);
+
+@sample
+
+i = 0;
+s = 0;
+while (i < unison)
+(
+    (0[i] += 64[i]) > 1 ? 0[i] -= 2;
+    s += 0[i];
+    i += 1;
+);
+
+spl0 = spl1 = s / 7.071 / unison / (
+    unison == 1 ? 0.5
+  : unison == 2 ? 0.332
+  : unison == 3 ? 0.27
+  : unison == 4 ? 0.233
+  : unison == 5 ? 0.208
+  : unison == 6 ? 0.19
+  : unison == 7 ? 0.176
+  : unison == 8 ? 0.163
+  : sqrt(2 / unison / 3 / $pi)
+);
