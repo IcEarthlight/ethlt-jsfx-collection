@@ -1,0 +1,265 @@
+desc: BassTools
+author: Earthlight
+version: 1.0
+
+slider1:hyper_dimension_order=0<0,10,1>Hyper/Dimension Order
+slider2:hyper_rate=0.4<0,1,0.01>Hyper Rate
+slider3:hyper_detune=0.25<0,1,0.01>Hyper Detune
+slider4:hyper_unison=4<0,7,1>Hyper Unison
+slider5:hyper_mix=0<0,1,0.01>Hyper Mix
+slider6:dimension_size=0<0,1,0.01>Dimension Size
+slider7:dimension_mix=1<0,1,0.01>Dimension Mix
+
+slider8:disperser_order=0<0,10,1>Disperser Order
+slider9:disperser_amt=8<0,32,1>Disperser Amount
+slider10:disperser_freq=130<20,20000,1:log=632>Disperser Freq
+slider11:disperser_pinch=0.5<0.5,16,0.01:log=1.45>Disperser Pinch
+
+slider12:bassmono_order=0<0,10,1>Bass Mono Order
+slider13:bassmono_freq=0<0,22000,1:log=400>Bass Mono Freq (Hz)
+
+in_pin:left input
+in_pin:right input
+out_pin:left output
+out_pin:right output
+
+@init
+cDenorm = 10^-30;
+
+fxorder = 0;
+fxindex = 10;
+fxnum = 3;
+
+hydm_histbuf = 20;
+hydm_histpos = 0;
+hydm_histsize = ceil(0.19 * srate);
+
+disperser_tmpspl01 = hydm_histbuf + 2 * hydm_histsize;
+disperser_tmpspl02 = disperser_tmpspl01 + 32;
+disperser_tmpspl11 = disperser_tmpspl02 + 32;
+disperser_tmpspl12 = disperser_tmpspl11 + 32;
+
+freembuf(20 + 2 * hydm_histsize + 128 + 1);
+
+function triangleLFO(x) ( x < 0.5 ? 2*x : 2 - 2*x ); // [0, 1) -> [0, 1] /\
+function frac(x) ( x - floor(x); );
+
+function hydm_getLastSpl0(n) (
+    pos0 = floor(hydm_histpos - n);
+    pos1 = pos0 + 1;
+    k = hydm_histpos - n - pos0;
+
+    pos0 < 0 ? pos0 += hydm_histsize;
+    pos1 < 0 ? pos1 += hydm_histsize;
+
+    (1 - k) * hydm_histbuf[pos0] + k * hydm_histbuf[pos1];
+);
+
+function hydm_getLastSpl1(n) (
+    pos0 = floor(hydm_histpos - n);
+    pos1 = pos0 + 1;
+    k = hydm_histpos - n - pos0;
+
+    pos0 < 0 ? pos0 += hydm_histsize;
+    pos1 < 0 ? pos1 += hydm_histsize;
+
+    (1 - k) * hydm_histbuf[pos0 + hydm_histsize] + k * hydm_histbuf[pos1 + hydm_histsize];
+);
+
+function hydm_getLastSplMono(n) (
+    pos0 = floor(hydm_histpos - n);
+    pos1 = pos0 + 1;
+    k = hydm_histpos - n - pos0;
+
+    pos0 < 0 ? pos0 += hydm_histsize;
+    pos1 < 0 ? pos1 += hydm_histsize;
+
+    ((1 - k) * (hydm_histbuf[pos0] + hydm_histbuf[pos0 + hydm_histsize]) + k * (hydm_histbuf[pos1] + hydm_histbuf[pos1 + hydm_histsize])) / 2;
+);
+
+@slider
+
+// fx order
+
+fxorder[0] = 1;
+fxorder[1] = 2;
+fxorder[2] = 3;
+fxindex[0] = hyper_dimension_order;
+fxindex[1] = disperser_order;
+fxindex[2] = bassmono_order;
+
+i = 0;
+while (i < fxnum - 1) (
+    min_order_index = i;
+    j = i + 1;
+    while (j < fxnum) (
+        fxindex[min_order_index] > fxindex[j] ? min_order_index = j;
+    );
+    min_order_index != i ? (
+        temp = fxindex[min_order_index];
+        fxindex[min_order_index] = fxindex[i];
+        fxindex[i] = temp;
+        temp = fxorder[min_order_index];
+        fxorder[min_order_index] = fxorder[i];
+        fxorder[i] = temp;
+    );
+    i += 1;
+);
+
+// hyper / dimension
+
+hyper_HPx = exp(-2 * $pi * 80 / srate);
+hyper_HPa0 = 1 - hyper_HPx;
+hyper_HPb1 = -hyper_HPx;
+
+dimension_offset_mult = 1.179762 + 0.000202 * dimension_size;
+
+// disperser
+
+n = 1 / tan($pi * disperser_freq / srate);
+nSquared = n^2;
+invQ = 1 / disperser_pinch;
+c1 = 1 / (1 + invQ * n + nSquared);
+disperser_b0 = c1 * (1 - n*invQ + nSquared);
+disperser_b1 = c1 * 2 * (1 - nSquared);
+disperser_b2 = 1;
+disperser_a1 = disperser_b1;
+disperser_a2 = disperser_b0;
+
+//bassmono
+
+bassmono_HPx = exp(-2 * $pi * bassmono_freq / srate);
+bassmono_HPa0 = 1.0 - bassmono_HPx;
+bassmono_HPb1 = -bassmono_HPx;
+
+@sample
+
+i = 0;
+while (i < 10) (
+
+    // hyper / dimension
+    fxorder[i] == 1 && hyper_dimension_order ? (
+        hydm_histbuf[hydm_histpos] = spl0;
+        hydm_histbuf[hydm_histpos + hydm_histsize] = spl1;
+
+        hyper_mix && hyper_unison > 0 ? (
+            wetspl0 = 0;
+            wetspl1 = 0;
+
+            lfo_len = 5.5 / (hyper_rate+0.001) - 4 + 2 / (hyper_rate + 1);
+            lfo_val = triangleLFO(frac(play_position / lfo_len + 0.436));
+            wetspl0 += hydm_getLastSpl0(1 + 0.0001875 * srate * (lfo_val * 106 * hyper_detune^2 + (1 - lfo_val) * hyper_detune + lfo_val));
+            lfo_val = triangleLFO(frac(play_position / lfo_len + 0.9));
+            wetspl1 += hydm_getLastSpl1(1 + 0.0001875 * srate * (lfo_val * 106 * hyper_detune^2 + (1 - lfo_val) * hyper_detune + lfo_val));
+
+            hyper_unison > 1 ? (
+                lfo_len = 5.5 / (hyper_rate+0.001) - 4 + 4 / (hyper_rate + 1);
+                lfo_val = triangleLFO(frac(play_position / lfo_len + 0.821));
+                wetspl0 += hydm_getLastSpl0(1 + 0.0001875 * srate * (lfo_val * 106 * hyper_detune^2 + (1 - lfo_val) * hyper_detune + lfo_val));
+                lfo_val = triangleLFO(frac(play_position / lfo_len + 0.591));
+                wetspl1 += hydm_getLastSpl1(1 + 0.0001875 * srate * (lfo_val * 106 * hyper_detune^2 + (1 - lfo_val) * hyper_detune + lfo_val));
+
+                hyper_unison > 2 ? (
+                    lfo_len = 5.5 / (hyper_rate+0.001) - 4 + 6 / (hyper_rate + 1);
+                    lfo_val = triangleLFO(frac(play_position / lfo_len + 0.095));
+                    wetspl0 += hydm_getLastSpl0(1 + 0.0001875 * srate * (lfo_val * 106 * hyper_detune^2 + (1 - lfo_val) * hyper_detune + lfo_val));
+                    lfo_val = triangleLFO(frac(play_position / lfo_len + 0.748));
+                    wetspl1 += hydm_getLastSpl1(1 + 0.0001875 * srate * (lfo_val * 106 * hyper_detune^2 + (1 - lfo_val) * hyper_detune + lfo_val));
+
+                    hyper_unison > 3 ? (
+                        lfo_len = 5.5 / (hyper_rate+0.001) - 4 + 8 / (hyper_rate + 1);
+                        lfo_val = triangleLFO(frac(play_position / lfo_len + 0.2));
+                        wetspl0 += hydm_getLastSpl0(1 + 0.0001875 * srate * (lfo_val * 106 * hyper_detune^2 + (1 - lfo_val) * hyper_detune + lfo_val));
+                        lfo_val = triangleLFO(frac(play_position / lfo_len + 0.167));
+                        wetspl1 += hydm_getLastSpl1(1 + 0.0001875 * srate * (lfo_val * 106 * hyper_detune^2 + (1 - lfo_val) * hyper_detune + lfo_val));
+
+                        hyper_unison > 4 ? (
+                            lfo_len = 5.5 / (hyper_rate+0.001) - 4 + 10 / (hyper_rate + 1);
+                            lfo_val = triangleLFO(frac(play_position / lfo_len + 0.891));
+                            wetspl0 += hydm_getLastSpl0(1 + 0.0001875 * srate * (lfo_val * 106 * hyper_detune^2 + (1 - lfo_val) * hyper_detune + lfo_val));
+                            lfo_val = triangleLFO(frac(play_position / lfo_len + 0.795));
+                            wetspl1 += hydm_getLastSpl1(1 + 0.0001875 * srate * (lfo_val * 106 * hyper_detune^2 + (1 - lfo_val) * hyper_detune + lfo_val));
+
+                            hyper_unison > 5 ? (
+                                lfo_len = 5.5 / (hyper_rate+0.001) - 4 + 12 / (hyper_rate + 1);
+                                lfo_val = triangleLFO(frac(play_position / lfo_len + 0.048));
+                                wetspl0 += hydm_getLastSpl0(1 + 0.0001875 * srate * (lfo_val * 106 * hyper_detune^2 + (1 - lfo_val) * hyper_detune + lfo_val));
+                                lfo_val = triangleLFO(frac(play_position / lfo_len + 0.521));
+                                wetspl1 += hydm_getLastSpl1(1 + 0.0001875 * srate * (lfo_val * 106 * hyper_detune^2 + (1 - lfo_val) * hyper_detune + lfo_val));
+
+                                hyper_unison > 6 ? (
+                                    lfo_len = 5.5 / (hyper_rate+0.001) - 4 + 14 / (hyper_rate + 1);
+                                    lfo_val = triangleLFO(frac(play_position / lfo_len + 0.467));
+                                    wetspl0 += hydm_getLastSpl0(1 + 0.0001875 * srate * (lfo_val * 106 * hyper_detune^2 + (1 - lfo_val) * hyper_detune + lfo_val));
+                                    lfo_val = triangleLFO(frac(play_position / lfo_len + 0.136));
+                                    wetspl1 += hydm_getLastSpl1(1 + 0.0001875 * srate * (lfo_val * 106 * hyper_detune^2 + (1 - lfo_val) * hyper_detune + lfo_val));
+                                );
+                            );
+                        );
+                    );
+                );
+            );
+
+            wetspl0 -= (tmpspl0HP1 = hyper_HPa0*wetspl0 - hyper_HPb1*tmpspl0HP1);
+            wetspl1 -= (tmpspl1HP1 = hyper_HPa0*wetspl1 - hyper_HPb1*tmpspl1HP1);
+            wetspl0 -= (tmpspl0HP2 = hyper_HPa0*wetspl0 - hyper_HPb1*tmpspl0HP2);
+            wetspl1 -= (tmpspl1HP2 = hyper_HPa0*wetspl1 - hyper_HPb1*tmpspl1HP2);
+            wetspl0 -= (tmpspl0HP3 = hyper_HPa0*wetspl0 - hyper_HPb1*tmpspl0HP3);
+            wetspl1 -= (tmpspl1HP3 = hyper_HPa0*wetspl1 - hyper_HPb1*tmpspl1HP3);
+            wetspl0 -= (tmpspl0HP4 = hyper_HPa0*wetspl0 - hyper_HPb1*tmpspl0HP4);
+            wetspl1 -= (tmpspl1HP4 = hyper_HPa0*wetspl1 - hyper_HPb1*tmpspl1HP4);
+            wetspl0 /= hyper_HPx^2;
+            wetspl1 /= hyper_HPx^2;
+
+            spl0 = hyper_mix * wetspl0 + (1 - 0.536*hyper_mix) * spl0;
+            spl1 = hyper_mix * wetspl1 + (1 - 0.536*hyper_mix) * spl1;
+        );
+
+        dimension_mix ? (
+            lfo_phase = 2 * $pi * frac(play_position / 2^(2.2 - 0.4*dimension_size));
+            lfo_val_sin = sin(lfo_phase);
+            lfo_val_cos = cos(lfo_phase);
+            wetspl = lfo_val_sin * hydm_getLastSplMono(offset = (0.015023 + 0.1 * dimension_size) * srate)
+                   + lfo_val_cos * hydm_getLastSplMono(offset *= dimension_offset_mult)
+                   - lfo_val_sin * hydm_getLastSplMono(offset *= dimension_offset_mult)
+                   - lfo_val_cos * hydm_getLastSplMono(offset *= dimension_offset_mult);
+            wetspl *= 0.5 * dimension_mix;
+            spl0 += wetspl;
+            spl1 -= wetspl;
+        );
+
+        hydm_histpos += 1;
+        hydm_histpos >= hydm_histsize ? hydm_histpos = 0;
+    );
+
+    // disperser
+
+    fxorder[i] == 2 && disperser_order ? (
+        j = 0;
+        while (j < disperser_amt) (
+            dryspl0 = spl0;
+            dryspl1 = spl1;
+            spl0 = (spl0 * disperser_b0) + disperser_tmpspl01[j];
+            spl1 = (spl1 * disperser_b0) + disperser_tmpspl11[j];
+
+            disperser_tmpspl01[j] = dryspl0 * disperser_b1 - spl0 * disperser_a1 + disperser_tmpspl02[j];
+            disperser_tmpspl11[j] = dryspl1 * disperser_b1 - spl1 * disperser_a1 + disperser_tmpspl12[j];
+            disperser_tmpspl02[j] = dryspl0 * disperser_b2 - spl0 * disperser_a2;
+            disperser_tmpspl12[j] = dryspl1 * disperser_b2 - spl1 * disperser_a2;
+
+            j += 1;
+        );
+    );
+
+    // bass mono
+
+    fxorder[i] == 3 && bassmono_order ? (
+        spldiff = spl1 - spl0;
+        spldiff -= (tmpHP2 = bassmono_HPa0*spldiff - bassmono_HPb1*tmpHP2);
+        spldiff *= bassmono_HPx^0.5;
+
+        spl1 = spl0 + spldiff;
+    );
+
+    i += 1;
+);
