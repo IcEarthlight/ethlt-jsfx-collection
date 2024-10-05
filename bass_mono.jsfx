@@ -1,0 +1,660 @@
+desc: BassMono
+author: Earthlight
+version: 1.0
+
+slider1:stereoize_size=0<0,1,0.05>-Stereoize Size
+slider2:stereoize_amount=0<0,1,0.05>-Stereoize Amount
+slider3:bassmono_source=-1<-1,1,0.05>-Mono Source
+slider4:bassmono_freq=30<30,22000,1:log=400>-Bass Mono Freq (Hz)
+slider5:bassmono_width=1<0,2,0.05>-Width
+slider6:bassmono_lrfix=0<0,1,1>-LR Fix
+slider7:bassmono_bypass=1<0,1,1>-Bypass
+
+in_pin:left input
+in_pin:right input
+out_pin:left output
+out_pin:right output
+
+@init
+
+stereoize_histbuf = 0;
+stereoize_histpos = 0;
+stereoize_histsize = ceil(0.19 * srate);
+
+bassmono_histsize = ceil(0.1 * srate);
+bassmono_lbuf = stereoize_histsize;
+bassmono_rbuf = stereoize_histsize + bassmono_histsize;
+bassmono_histpos = 0;
+
+bassmono_imspace_histsize = ceil(0.25 * srate);
+bassmono_mbuf = bassmono_rbuf + bassmono_histsize;
+bassmono_sbuf = bassmono_mbuf + bassmono_imspace_histsize;
+bassmono_imspace_histpos = 0;
+
+freembuf(stereoize_histsize + 2*bassmono_histsize + 2*bassmono_imspace_histsize + 1);
+memset(0, 0, stereoize_histsize + 2*bassmono_histsize + 2*bassmono_imspace_histsize);
+
+bassmono_lss = 0;
+bassmono_rss = 0;
+
+gfx_scale = gfx_ext_retina <= 1 ? 1 : 2;
+
+function frac(x) ( x - floor(x); );
+
+function stereoize_getLastSpl(n) (
+    pos0 = floor(stereoize_histpos - n);
+    pos1 = pos0 + 1;
+    k = stereoize_histpos - n - pos0;
+
+    pos0 < 0 ? pos0 += stereoize_histsize;
+    pos1 < 0 ? pos1 += stereoize_histsize;
+
+    (1 - k) * stereoize_histbuf[pos0] + k * stereoize_histbuf[pos1];
+);
+
+function lerp(x, y, k) ( (1-k) * x + k * y; );
+function deg2rad(deg) (deg * $pi / 180; );
+RAD135 = deg2rad(135);
+RAD225 = deg2rad(225);
+
+function on_slider() (
+    stereoize_offset_mult = 1.179762 + 0.000202 * dimension_size;
+
+    bassmono_HPx = exp(-2 * $pi * bassmono_freq / srate);
+    bassmono_HPa0 = 1.0 - bassmono_HPx;
+    bassmono_HPb1 = -bassmono_HPx;
+);
+
+// gfx functions
+
+selknob_nslider = 0;
+selknob_min = 0;
+selknob_max = 0;
+selknob_tension = 0;
+
+wheelknob_nslider = 0;
+wheelknob_min = 0;
+wheelknob_max = 0;
+wheelknob_tension = 0;
+
+doubleclk_nslider = 0;
+
+//gfx_setfont(1, "Bahnschrift SemiBold Condensed", 18 * gfx_scale);
+//gfx_setfont(2, "Bahnschrift Condensed", 6 * gfx_scale);
+
+function update_mouse_state()
+instance(cap, x, y, lx, ly, dx, dy, right_click, left_click, lleft, lright, left, right, click_time, double_click, control, lwheel, wheel)
+global(mouse_cap, mouse_x, mouse_y, mouse_wheel)
+(
+    lleft = left;
+    lright = right;
+    lx = x;
+    ly = y;
+    cap = mouse_cap;
+    control = mouse_cap & 4;
+    x = mouse_x;
+    y = mouse_y;
+
+    left = cap & 1 > 0;
+    right = cap & 2 > 0;
+    left_click = left && lleft == 0;
+    right_click = right && lright == 0;
+    dx = x - lx;
+    dy = y - ly;
+
+    wheel = mouse_wheel > lwheel ? 1 : mouse_wheel < lwheel ? -1 : 0;
+    lwheel = mouse_wheel;
+
+    left_click ? (
+        time_precise() - click_time < .5 ? double_click = 1;
+        click_time = time_precise();
+    ) : (
+        double_click = 0;
+    );
+);
+
+function log_scale(val, _min, _max, tension)
+local (scale) (
+    scale = (val - _min) / (_max - _min);
+    scale ^= tension;
+    scale * (_max - _min) + _min;
+);
+
+function inverse_log_scale(val, _min, _max, tension)
+local (scale) (
+    scale = (val - _min) / (_max - _min);
+    scale ^= 1/tension;
+    scale * (_max - _min) + _min;
+);
+
+function mouse_in_rect(x, y, w, h) (
+    mouse.x >= x && mouse.x <= x + w && mouse.y >= y && mouse.y <= y + h;
+);
+
+function mouse_in_circle(x, y, r) (
+    (mouse.x - x)^2 + (mouse.y - y)^2 <= r*r;
+);
+
+function draw_knob(x, y, nslider, label, default, _min, _max, tension, is_sym, style, val_label)
+instance (size_offset, label_alpha)
+(
+    knob_r = gfx_r;
+    knob_g = gfx_g;
+    knob_b = gfx_b;
+
+    mouse_in_circle(x+19, y+19, 20) ? (
+        mouse.double_click ? (
+            slider(nslider) = default;
+            doubleclk_nslider = nslider;
+        );
+        mouse.left_click ? (
+            selknob_nslider = nslider;
+            selknob_min = _min;
+            selknob_max = _max;
+            selknob_tension = tension;
+        );
+        mouse.wheel ? (
+            wheelknob_nslider = nslider;
+            wheelknob_min = _min;
+            wheelknob_max = _max;
+            wheelknob_tension = tension;
+        );
+    );
+
+    mouse_in_circle(x+19, y+19, 20) || selknob_nslider == nslider ?
+        size_offset = lerp(size_offset, 1.5, 0.5)
+      : size_offset = lerp(size_offset, 0, 0.5);
+    size_offset = max(0, min(1.5, size_offset));
+
+    gfx_set(0.22745098039215686, 0.23921568627450981, 0.2549019607843137); // #3A3D41
+    gfx_circle(x+19, y+19, 16 - size_offset, 1, 1);
+
+    gfx_set(0.19215686274509805, 0.2, 0.20784313725490197); // #313335
+    temp_delta = $pi / 16;
+    gfx_triangle(
+        x + 19, y + 19,
+        x + 19 * (1 + cos(temp = -$pi / 4)), y + 19 * (1 - sin(temp)),
+        x + 19 * (1 + cos(temp += temp_delta)), y + 19 * (1 - sin(temp)),
+        x + 19 * (1 + cos(temp += temp_delta)), y + 19 * (1 - sin(temp)),
+        x + 19 * (1 + cos(temp += temp_delta)), y + 19 * (1 - sin(temp)),
+        x + 38, y + 19,
+        x + 19 * (1 + cos(temp += 2*temp_delta)), y + 19 * (1 - sin(temp)),
+        x + 19 * (1 + cos(temp += temp_delta)), y + 19 * (1 - sin(temp)),
+        x + 19 * (1 + cos(temp += temp_delta)), y + 19 * (1 - sin(temp)),
+        x + 19 * (1 + cos(temp += temp_delta)), y + 19 * (1 - sin(temp)),
+        x + 19 * (1 + cos(temp += temp_delta)), y + 19 * (1 - sin(temp)),
+        x + 19 * (1 + cos(temp += temp_delta)), y + 19 * (1 - sin(temp)),
+        x + 19 * (1 + cos(temp += temp_delta)), y + 19 * (1 - sin(temp)),
+        x + 19, y,
+        x + 19, y + 19
+    );
+    gfx_triangle(
+        x + 19, y + 19,
+        x + 19, y,
+        x + 19 * (1 + cos(temp += 2*temp_delta)), y + 19 * (1 - sin(temp)),
+        x + 19 * (1 + cos(temp += temp_delta)), y + 19 * (1 - sin(temp)),
+        x + 19 * (1 + cos(temp += temp_delta)), y + 19 * (1 - sin(temp)),
+        x + 19 * (1 + cos(temp += temp_delta)), y + 19 * (1 - sin(temp)),
+        x + 19 * (1 + cos(temp += temp_delta)), y + 19 * (1 - sin(temp)),
+        x + 19 * (1 + cos(temp += temp_delta)), y + 19 * (1 - sin(temp)),
+        x + 19 * (1 + cos(temp += temp_delta)), y + 19 * (1 - sin(temp)),
+        x, y + 19,
+        x + 19 * (1 + cos(temp += 2*temp_delta)), y + 19 * (1 - sin(temp)),
+        x + 19 * (1 + cos(temp += temp_delta)), y + 19 * (1 - sin(temp)),
+        x + 19 * (1 + cos(temp += temp_delta)), y + 19 * (1 - sin(temp)),
+        x + 19 * (1 + cos(temp += temp_delta)), y + 19 * (1 - sin(temp)),
+        x + 19, y + 19
+    );
+
+    slider_val = slider(nslider);
+    tension ? (
+        slider_val = inverse_log_scale(slider_val, _min, _max, tension);
+    );
+
+    // linear map value from min/max to [-pi/4, 5*pi/4]
+    slider_rad = (5 - 6 * (slider_val - _min) / (_max - _min)) * $pi / 4;
+
+    slider_val != _min ? (
+        gfx_set(
+            lerp(gfx_r, knob_r, 0.7 + size_offset / 5),
+            lerp(gfx_g, knob_g, 0.7 + size_offset / 5),
+            lerp(gfx_b, knob_b, 0.7 + size_offset / 5)
+        );
+        temp_delta = (slider_rad - RAD225) / 24;
+        gfx_triangle(
+            x + 19, y + 19,
+            x + 19 * (1 + cos(temp = RAD225)), y + 19 * (1 - sin(temp)),
+            x + 19 * (1 + cos(temp += temp_delta)), y + 19 * (1 - sin(temp)),
+            x + 19 * (1 + cos(temp += temp_delta)), y + 19 * (1 - sin(temp)),
+            x + 19 * (1 + cos(temp += temp_delta)), y + 19 * (1 - sin(temp)),
+            x + 19 * (1 + cos(temp += temp_delta)), y + 19 * (1 - sin(temp)),
+            x + 19 * (1 + cos(temp += temp_delta)), y + 19 * (1 - sin(temp)),
+            x + 19 * (1 + cos(temp += temp_delta)), y + 19 * (1 - sin(temp)),
+            x + 19 * (1 + cos(temp += temp_delta)), y + 19 * (1 - sin(temp)),
+            x + 19 * (1 + cos(temp += temp_delta)), y + 19 * (1 - sin(temp)),
+            x + 19 * (1 + cos(temp += temp_delta)), y + 19 * (1 - sin(temp)),
+            x + 19 * (1 + cos(temp += temp_delta)), y + 19 * (1 - sin(temp)),
+            x + 19 * (1 + cos(temp += temp_delta)), y + 19 * (1 - sin(temp)),
+            x + 19 * (1 + cos(temp = (RAD225 + slider_rad) / 2)), y + 19 * (1 - sin(temp)),
+            x + 19, y + 19
+        );
+        gfx_triangle(
+            x + 19, y + 19,
+            x + 19 * (1 + cos(temp)), y + 19 * (1 - sin(temp)),
+            x + 19 * (1 + cos(temp += temp_delta)), y + 19 * (1 - sin(temp)),
+            x + 19 * (1 + cos(temp += temp_delta)), y + 19 * (1 - sin(temp)),
+            x + 19 * (1 + cos(temp += temp_delta)), y + 19 * (1 - sin(temp)),
+            x + 19 * (1 + cos(temp += temp_delta)), y + 19 * (1 - sin(temp)),
+            x + 19 * (1 + cos(temp += temp_delta)), y + 19 * (1 - sin(temp)),
+            x + 19 * (1 + cos(temp += temp_delta)), y + 19 * (1 - sin(temp)),
+            x + 19 * (1 + cos(temp += temp_delta)), y + 19 * (1 - sin(temp)),
+            x + 19 * (1 + cos(temp += temp_delta)), y + 19 * (1 - sin(temp)),
+            x + 19 * (1 + cos(temp += temp_delta)), y + 19 * (1 - sin(temp)),
+            x + 19 * (1 + cos(temp += temp_delta)), y + 19 * (1 - sin(temp)),
+            x + 19 * (1 + cos(temp += temp_delta)), y + 19 * (1 - sin(temp)),
+            x + 19 * (1 + cos(slider_rad)), y + 19 * (1 - sin(slider_rad)),
+            x + 19, y + 19
+        );
+    );
+
+    style == 0 ?
+        gfx_set(0.3058823529411765, 0.3215686274509804, 0.34509803921568627) // #4E5258
+      : gfx_set(0.43137254901960786, 0.4549019607843137, 0.49019607843137253); // #6E747D
+    gfx_circle(x+19, y+19, 13 - size_offset, 1, 1);
+    _sin = sin(slider_rad);
+    _cos = cos(slider_rad);
+    r = (12 - size_offset);
+    gfx_set(knob_r, knob_g, knob_b);
+    gfx_triangle(
+        x + 19 + ( 6 - size_offset) * _cos + gfx_scale * _sin / 2, y + 19 - ( 6 - size_offset) * _sin + gfx_scale * _cos / 2,
+        x + 19 + (12 - size_offset) * _cos + gfx_scale * _sin / 2, y + 19 - (12 - size_offset) * _sin + gfx_scale * _cos / 2,
+        x + 19 + (12 - size_offset) * _cos - gfx_scale * _sin / 2, y + 19 - (12 - size_offset) * _sin - gfx_scale * _cos / 2,
+        x + 19 + ( 6 - size_offset) * _cos - gfx_scale * _sin / 2, y + 19 - ( 6 - size_offset) * _sin - gfx_scale * _cos / 2
+    );
+
+    gfx_setfont(2, "Bahnschrift Regular", 12 * gfx_scale);
+    gfx_set(0.6196078431372549, 0.6588235294117647, 0.6784313725490196); // #9EA8AD
+    gfx_x = x - 19;
+    gfx_y = y + 19 * 2 - gfx_scale;
+    gfx_drawstr(label, 1, x + 57, y + 100);
+
+    label_alpha = selknob_nslider == nslider ? 1 : lerp(label_alpha, 0, 0.25);
+    label_alpha ? (
+        gfx_measurestr(val_label, textw, texth);
+        gfx_set(0.13333333333333333, 0.13333333333333333, 0.13333333333333333, 0.4 * label_alpha^2); // #22222266
+        gfx_rect(x + 15 - textw/2, y - 10 - texth/2, textw + 8, texth + 2);
+
+        gfx_set(0.6823529411764706, 0.8117647058823529, 0.9019607843137255, label_alpha); // #AECFE6
+        gfx_x = x + 19 - textw/2;
+        gfx_y = y - 9 - texth/2;
+        gfx_drawstr(val_label);
+    );
+
+    gfx_set(knob_r, knob_g, knob_b, knob_a);
+);
+
+function draw_in_button(x, y, toggled) instance (alpha) (
+    !alpha ? alpha = toggled ? 1 : 0.025;
+    alpha = 10 ^ lerp(log10(alpha), toggled ? 0 : -1.6020599913, 0.6);
+    
+    gfx_set(0.2, 0.19607843137254902, 0.19215686274509805); // #333231
+    gfx_triangle(
+        x, y + 18,
+        x, y + 2,
+        x + 2, y,
+        x + 31, y,
+        x + 33, y + 2,
+        x + 33, y + 18
+    );
+
+    gfx_set(0.3215686274509804, 0.3137254901960784, 0.30980392156862746); // #52504F
+    gfx_triangle(
+        x, y + 18,
+        x + 2, y + 20,
+        x + 31, y + 20,
+        x + 33, y + 18
+    );
+
+    gfx_set(0.1607843137254902, 0.15294117647058825, 0.14901960784313725, alpha); // #292726
+    gfx_triangle(
+        x + 1, y + 2,
+        x + 2, y + 1,
+        x + 31, y + 1,
+        x + 32, y + 2,
+        x + 32, y + 18,
+        x + 31, y + 19,
+        x + 2, y + 19,
+        x + 1, y + 18
+    );
+
+    gfx_set(0.12941176470588237, 0.12156862745098039, 0.12156862745098039, alpha); // #211F1F
+    gfx_rect(x + 2, y + 2, 30, 17);
+
+    gfx_set(0.5254901960784314, 0.5372549019607843, 0.5764705882352941, alpha); // #868993
+    gfx_triangle(
+        x + 2, y + 3,
+        x + 3, y + 2,
+        x + 30, y + 2,
+        x + 31, y + 3,
+        x + 31, y + 17,
+        x + 30, y + 18,
+        x + 3, y + 18,
+        x + 2, y + 17
+    );
+
+    gfx_set(0.788235294117647, 0.792156862745098, 0.807843137254902, alpha); // #C9CACE
+    gfx_rect(x + 3, y + 3, 28, 15);
+    gfx_set(0.6745098039215687, 0.6901960784313725, 0.7176470588235294, alpha); // #ACB0B7
+    gfx_rect(x + 3, y + 4, 27, 14);
+
+    gfx_setfont(3, "Bahnschrift BOLD", 12 * gfx_scale, "b");
+    gfx_set(0.29411764705882354, 0.30196078431372547, 0.3176470588235294); // #4B4D51
+    gfx_x = x + 3; gfx_y = y + 3;
+    gfx_drawstr("IN", 5, x + 31, y + 18);
+);
+
+function draw_checkbox(x, y, toggled) instance (state) (
+    checkbox_r = gfx_r;
+    checkbox_g = gfx_g;
+    checkbox_b = gfx_b;
+    
+    !state ? state = toggled;
+    state = lerp(state, toggled, 0.6);
+
+    gfx_set(0.06666666666666667, 0.06666666666666667, 0.06666666666666667, 0.5); // #111111
+    gfx_rect(x, y, 10, 10);
+
+    gfx_set(0.06666666666666667, 0.06666666666666667, 0.06666666666666667); // #111111
+    gfx_triangle(
+        x, y + 1,
+        x + 1, y,
+        x + 8, y,
+        x + 9, y + 1,
+        x + 9, y + 8,
+        x + 8, y + 9,
+        x + 1, y + 9,
+        x , y + 8
+    );
+
+    // gfx_set(0.30980392156862746, 0.3254901960784314, 0.3333333333333333); // #4F5355
+    gfx_r = lerp(0.30980392156862746, checkbox_r, 0.3 * state);
+    gfx_g = lerp(0.3254901960784314,  checkbox_g, 0.3 * state);
+    gfx_b = lerp(0.3333333333333333,  checkbox_b, 0.3 * state);
+    gfx_rect(x + 1, y + 1, 8, 8);
+
+    // gfx_set(0.23529411764705882, 0.24313725490196078, 0.25882352941176473); // #3C3E42
+    gfx_r = lerp(0.23529411764705882, checkbox_r, 1.1 * state);
+    gfx_g = lerp(0.24313725490196078, checkbox_g, 1.1 * state);
+    gfx_b = lerp(0.25882352941176473, checkbox_b, 1.1 * state);
+    gfx_rect(x + 2, y + 2, 6, 6);
+
+    // gfx_set(0.1568627450980392, 0.16470588235294117, 0.17647058823529413); // #282A2D
+    gfx_r = lerp(0.1568627450980392,  checkbox_r, 1.3 * state);
+    gfx_g = lerp(0.16470588235294117, checkbox_g, 1.3 * state);
+    gfx_b = lerp(0.17647058823529413, checkbox_b, 1.3 * state);
+    gfx_rect(x + 2.5 + 5*state, y + 5.5 - 3*state, 1, 3.5 + 2*state);
+    gfx_rect(x + 2, y + 7.5 - 5*state, 6, 1.5 + state);
+);
+
+function draw_title_background(x, y, w, h) ( // 57 18
+    gfx_triangle(
+        x, y,
+        x, y + h + 5 * gfx_scale,
+        x + w + 10 * gfx_scale, y + h + 5 * gfx_scale,
+        x + w + 12 * gfx_scale, y + h + 4 * gfx_scale,
+        x + w + h/2 + 14 * gfx_scale, y,
+        x, y
+    );
+);
+
+function draw_title_highlight(x, y, w, h) (
+    gfx_rect(x, y, w + h/2 + 15 * gfx_scale, gfx_scale);
+);
+
+function draw_space_img(center_x, center_y, radius, margin_x, margin_y)
+local (left, right, top, bottom) (
+    left = center_x - radius - margin_x;
+    right = center_x + radius + margin_x;
+    top = center_y - radius - margin_y;
+    bottom = center_y + margin_y + 2;
+    
+    gfx_set(0.20784313725490197, 0.2235294117647059, 0.23137254901960785); // #35393B
+    gfx_rect(
+        left, top,
+        radius * 2 + margin_x * 2 + 1,
+        radius + margin_y * 2 + 2
+    );
+    gfx_set(0.1803921568627451, 0.19215686274509805, 0.2); // #2E3133
+    gfx_line(left, top, right, top);
+    gfx_set(0.2823529411764706, 0.30196078431372547, 0.30980392156862746); // #484D4F
+    gfx_line(left, bottom, right, bottom);
+     
+    gfx_set(0, 0, 0, 0.12);
+    gfx_line(center_x - radius, center_y + 1, center_x + radius, center_y + 1, 1);
+    gfx_line(center_x - sqrt(0.5) * radius, center_y - sqrt(0.5) * radius, center_x, center_y, 1);
+    gfx_line(center_x + sqrt(0.5) * radius, center_y - sqrt(0.5) * radius, center_x, center_y, 1);
+    gfx_arc(center_x, center_y, radius, -$pi/2, $pi/2, 1);
+    
+    i = bassmono_imspace_histpos;
+    alpha = 0.1 + 0.9 * 0.99975^bassmono_imspace_histsize;
+    loop(bassmono_imspace_histsize,
+        bassmono_sbuf[i] || bassmono_mbuf[i] ? (
+            gfx_x = center_x + radius * bassmono_sbuf[i] + 0.5;
+            gfx_y = center_y - radius * bassmono_mbuf[i] + 0.5;
+            left <= gfx_x && gfx_x <= right + 1 && top + 1 < gfx_y ?
+                gfx_setpixel(
+                    lerp(0.20784313725490197, 0.792156862745098, alpha),
+                    lerp(0.2235294117647059,  0.792156862745098, alpha),
+                    lerp(0.23137254901960785, 0.8, alpha)
+                );
+        );
+        i += 1;
+        i >= bassmono_imspace_histsize ? i = 0;
+        alpha = lerp(0.1, alpha, 1/0.99975);
+    );
+);
+
+@slider
+
+on_slider();
+
+@sample
+
+bassmono_bypass ? (
+    stereoize_amount ? (
+        stereoize_histbuf[stereoize_histpos] = (spl0 + spl1) / 2;
+
+        lfo_phase = 2 * $pi * frac(play_position / 2^(2.2 - 0.4*stereoize_size));
+        lfo_val_sin = sin(lfo_phase);
+        lfo_val_cos = cos(lfo_phase);
+        wetspl = lfo_val_sin * stereoize_getLastSpl(offset = (0.015023 + 0.1 * stereoize_size) * srate)
+               + lfo_val_cos * stereoize_getLastSpl(offset *= stereoize_offset_mult)
+               - lfo_val_sin * stereoize_getLastSpl(offset *= stereoize_offset_mult)
+               - lfo_val_cos * stereoize_getLastSpl(offset *= stereoize_offset_mult);
+        wetspl *= 0.5 * stereoize_amount;
+        spl0 += wetspl;
+        spl1 -= wetspl;
+
+        stereoize_histpos += 1;
+        stereoize_histpos >= stereoize_histsize ? stereoize_histpos = 0;
+    );
+
+    bassmono_lrfix ? (
+        bassmono_lss -= bassmono_lbuf[bassmono_histpos] ^ 2;
+        bassmono_rss -= bassmono_rbuf[bassmono_histpos] ^ 2;
+
+        bassmono_lbuf[bassmono_histpos] = spl0;
+        bassmono_rbuf[bassmono_histpos] = spl1;
+
+        bassmono_lss += spl0 ^ 2;
+        bassmono_rss += spl1 ^ 2;
+
+        bassmono_lrmsdb = 10 * log10(bassmono_lss / bassmono_histsize);
+        bassmono_rrmsdb = 10 * log10(bassmono_rss / bassmono_histsize);
+
+        bassmono_lrmsdb > bassmono_rrmsdb ? (
+            spl1 *= 10 ^ (min(24, bassmono_lrmsdb - bassmono_rrmsdb) / 20);
+        ) : (
+            spl0 *= 10 ^ (min(24, bassmono_rrmsdb - bassmono_lrmsdb) / 20);
+        );
+
+        bassmono_histpos += 1;
+        bassmono_histpos >= bassmono_histsize ? bassmono_histpos = 0;
+    );
+
+    bassmono_freq > 30 ? (
+        k = (bassmono_source + 1) / 2;
+        splmono = (1-k) * spl0 + k * spl1;
+        spldiff = spl1 - spl0;
+        spldiff -= (tmpHP2 = bassmono_HPa0*spldiff - bassmono_HPb1*tmpHP2);
+        spldiff *= bassmono_HPx^0.5;
+
+        spl0 = splmono - k * spldiff;
+        spl1 = splmono + (1-k) * spldiff;
+    );
+
+    bassmono_width != 1 ? (
+        splmid = (spl0 + spl1) / 2;
+        splside = (spl1 - spl0) / 2;
+        splside *= bassmono_width;
+
+        spl0 = splmid - splside;
+        spl1 = splmid + splside;
+    );
+    
+    // imspace buffering
+    splmid = spl0 + spl1;
+    splside = splmid >= 0 ? spl1 - spl0 : spl0 - spl1;
+    splmid = abs(splmid);
+    norm = 0.5 * (splmid + abs(splside));
+    k = norm / sqrt(splmid^2 + splside^2);
+    
+    gain_db += 12 / srate;
+    spl_db = 20 * log10(norm);
+    norm ? gain_db = max(0, min(gain_db, -spl_db));
+    gain_db = min(gain_db, 96);
+    k *= 10^(gain_db/20);
+    bassmono_mbuf[bassmono_imspace_histpos] = k * splmid;
+    bassmono_sbuf[bassmono_imspace_histpos] = k * splside;
+    
+    bassmono_imspace_histpos += 1;
+    bassmono_imspace_histpos >= bassmono_imspace_histsize ? bassmono_imspace_histpos = 0;
+);
+
+@gfx 692 75
+
+// gfx_w = 692 * gfx_scale;
+// gfx_h = 75 * gfx_scale;
+mouse.update_mouse_state();
+
+// background
+
+gfx_set(0.2196078431372549, 0.2235294117647059, 0.23137254901960785);
+gfx_rect(0, 0, gfx_w, 1);
+gfx_rect(0, gfx_h-1, gfx_w, 1);
+gfx_set(0.25098039215686274, 0.26666666666666666, 0.27450980392156865); // #404446
+gfx_rect(0, 1, gfx_w, gfx_h-2);
+
+// stereoize title
+
+gfx_setfont(1, "Bahnschrift SemiBold Condensed", 18 * gfx_scale, "b");
+gfx_measurestr("STEREOIZE", textw, texth);
+gfx_set(0.6745098039215687, 0.6745098039215687, 0.6823529411764706); // #ACACAE
+draw_title_background(0, 0, textw, texth);
+gfx_set(0.788235294117647, 0.788235294117647, 0.8431372549019608); // #C9C9D7
+draw_title_highlight(0, 0, textw, texth);
+
+gfx_set(0.7647058823529411, 0.7647058823529411, 0.807843137254902); // #C3C3CE
+gfx_x = 5; gfx_y = 3; gfx_drawstr("STEREOIZE");
+gfx_set(0.25098039215686274, 0.26666666666666666, 0.27450980392156865); // #404446
+gfx_x = 5; gfx_y = 3 - gfx_scale; gfx_drawstr("STEREOIZE");
+
+// separator
+
+gfx_set(0.29411764705882354, 0.32941176470588235, 0.34509803921568627); // #4B5458
+gfx_rect(213, 0, 1, gfx_h);
+gfx_rect(215, 0, 1, gfx_h);
+gfx_set(0.1607843137254902, 0.1568627450980392, 0.16470588235294117); // #29282A
+gfx_rect(214, 0, 1, gfx_h);
+
+// bass mono title
+
+gfx_measurestr("BASS MONO", textw, texth);
+gfx_set(0.6745098039215687, 0.6745098039215687, 0.6823529411764706); // #ACACAE
+draw_title_background(215, 0, textw, texth);
+gfx_set(0.788235294117647, 0.788235294117647, 0.8431372549019608); // #C9C9D7
+draw_title_highlight(215, 0, textw, texth);
+
+gfx_set(0.7647058823529411, 0.7647058823529411, 0.807843137254902); // #C3C3CE
+gfx_x = 220; gfx_y = 3; gfx_drawstr("BASS MONO");
+gfx_set(0.25098039215686274, 0.26666666666666666, 0.27450980392156865); // #404446
+gfx_x = 220; gfx_y = 3 - gfx_scale; gfx_drawstr("BASS MONO");
+
+gfx_set(0.7058823529411765, 0.7058823529411765, 0.7568627450980392); // #B4B4C1
+gfx_rect(215, 1, 1, texth + 5 * gfx_scale);
+
+gfx_set(0.6745098039215687, 0.6745098039215687, 0.6823529411764706); // #ACACAE
+slider1.draw_knob(87,  17, 1, "Size",    0,  0,     1, 0,       0, 0, sprintf(#, "%d%%", 100 * stereoize_size));
+slider2.draw_knob(144, 17, 2, "Amount",  0,  0,     1, 0,       0, 0, sprintf(#, "%d%%", 100 * stereoize_amount));
+slider3.draw_knob(307, 17, 3, "Source", -1, -1,     1, 0,       1, 0, bassmono_source == 0 ? "Mid" : bassmono_source < 0 ? sprintf(#, "%d%% L", -100 * bassmono_source) : sprintf(#, "%d%% R", 100 * bassmono_source));
+slider4.draw_knob(364, 17, 4, "Freq",   30, 30, 22000, 5.78136, 0, 0, bassmono_freq == 30 ? "Off" : bassmono_freq <= 2000 ? sprintf(#, "%dHz", bassmono_freq) : sprintf(#, "%.1fkHz", bassmono_freq / 1000));
+slider5.draw_knob(421, 17, 5, "Width",   1,  0,     2, 0,       0, 0, sprintf(#, "%d%%", 100 * bassmono_width));
+
+gfx_set(0.6745098039215687, 0.6745098039215687, 0.6823529411764706); // #ACACAE
+slider6.draw_checkbox(476, 56, bassmono_lrfix);
+gfx_measurestr("LR Fix", textw, texth);
+gfx_set(0.6196078431372549, 0.6588235294117647, 0.6784313725490196); // #9EA8AD
+gfx_x = 492; gfx_y = 54; gfx_drawstr("LR Fix");
+mouse.left_click && mouse_in_rect(472, 52, textw + 28, 18) ? (
+    bassmono_lrfix = !bassmono_lrfix;
+);
+
+draw_space_img(582, 56, 35, 5, 5);
+
+slider7.draw_in_button(gfx_w - 46, 27, bassmono_bypass == 1);
+mouse.left_click && mouse_in_rect(gfx_w - 46, 27, 33, 20) ? (
+    bassmono_bypass = !bassmono_bypass;
+);
+
+// gfx_set(1, 1, 1);
+// gfx_x = 50; gfx_y = 50;
+// gfx_drawnumber(bassmono_lrmsdb - bassmono_rrmsdb, 6);
+
+// ================
+
+function on_knob_move(nslider, slider_min, slider_max, slider_tension, factor) (
+    factor *= mouse.control ? 0.05 : 1;
+    slider_tension ? (
+        temp = inverse_log_scale(slider(nslider), slider_min, slider_max, slider_tension);
+        inc = (slider_max - slider_min) / 100 * -factor;
+        temp += inc;
+        slider(nslider) = log_scale(temp, slider_min, slider_max, slider_tension);
+    ) : (
+        inc = (slider_max - slider_min) / 100 * -factor;
+        slider(nslider) += inc;
+    );
+
+    slider(nslider) = max(slider_min, min(slider_max, slider(nslider)));
+    on_slider();
+    sliderchange(slider(nslider));
+    slider_automate(slider(nslider));
+);
+
+wheelknob_nslider ? (
+    on_knob_move(wheelknob_nslider, wheelknob_min, wheelknob_max, wheelknob_tension, mouse.wheel * -5);
+);
+
+selknob_nslider && mouse.left && mouse.dy != 0 ? (
+    on_knob_move(selknob_nslider, selknob_min, selknob_max, selknob_tension, mouse.dy);
+);
+
+doubleclk_nslider ? (
+    on_slider();
+    sliderchange(slider(doubleclk_nslider));
+    slider_automate(slider(doubleclk_nslider));
+    doubleclk_nslider = 0;
+);
+
+gfx_setcursor(selknob_nslider ? 32511 : 0);
+!mouse.wheel ? wheelknob_nslider = 0;
+!mouse.left ? selknob_nslider = 0;
