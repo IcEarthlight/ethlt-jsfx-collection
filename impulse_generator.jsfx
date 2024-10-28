@@ -1,0 +1,42 @@
+desc: ImpulseGenerator
+author: Earthlight
+version: 0.0
+
+slider1:amp=1<-1,1,0.05>Amplification
+slider2:vel_rel=0<0,1,1>Velocity Relevance
+slider3:dc_offset=0<-1,1,0.05>DC Offset
+
+out_pin:left output
+out_pin:right output
+
+@block
+
+scount = 0;
+note_count = 0;
+note_play = 0;
+
+while(midirecv(offset, msg1, note, vel)) (
+    event = msg1 & 0xF0;
+    channel = msg1 & 0x0F;
+
+    // Note on
+    event == 0x90 && vel ? (
+        (3*note_count)[0] = offset;
+        (3*note_count)[1] = note;
+        (3*note_count)[2] = vel_rel ? vel / 127 : 1;
+        note_count += 1;
+    );
+);
+
+@sample
+
+note_play < note_count ? (
+    (3*note_play)[0] <= scount ? (
+        spl0 = spl1 = (3*note_play)[2] * amp;
+        note_play += 1;
+    );
+);
+
+spl0 += dc_offset;
+spl1 += dc_offset;
+scount += 1;
