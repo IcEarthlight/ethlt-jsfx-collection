@@ -1,0 +1,152 @@
+desc: ImSpace
+author: Earthlight
+version: 1.0
+
+in_pin:left input
+in_pin:right input
+out_pin:none
+
+options:gfx_hz=60 no_meter gfx_idle
+
+@init
+
+ext_tail_size = -1;
+ext_noinit = 1;
+last_play_state = 0;
+gain_db = min(gain_db, 12);
+
+histsize = 2 * srate;
+histbuf_m = 0;
+histbuf_s = histsize;
+histpos = 0;
+
+freembuf(2 * histsize + 1);
+
+lss = 0;
+rss = 0;
+mss = 0;
+sss = 0;
+spl_num = 0;
+last_lr_factor = 0;
+last_ms_factor_ = 1;
+
+time_precise(last_time_stamp);
+
+function lerp(x, y, k) (
+    (1-k) * x + k * y;
+);
+
+@sample
+
+mid = spl0 + spl1;
+side = mid >= 0 ? spl1 - spl0 : spl0 - spl1;
+mid = abs(mid);
+norm = 0.5 * (mid + abs(side));
+k = norm / sqrt(mid^2 + side^2);
+
+gain_db += 11 / srate;
+spl_db = 20 * log10(norm);
+norm ? gain_db = max(0, min(gain_db, -spl_db));
+last_play_state != play_state ? (
+    last_play_state = play_state;
+    gain_db = min(gain_db, 12);
+) : gain_db = min(gain_db, 96);
+k *= 10^(gain_db/20);
+
+spl_db <= 0 ? (
+    histbuf_m[histpos] = k * mid;
+    histbuf_s[histpos] = k * side;
+) : (
+    histbuf_m[histpos] = -k * mid / norm;
+    histbuf_s[histpos] = k * side / norm;
+);
+
+histpos += 1;
+histpos >= histsize ? histpos = 0;
+
+lss += spl0^2;
+rss += spl1^2;
+mss += ((spl0 + spl1) / 2)^2;
+sss += ((spl0 - spl1) / 2)^2;
+
+@gfx 525 274
+
+gfx_fps = 60;
+
+// 252 225
+// 254
+gfx_set(0.12156862745098039, 0.12156862745098039, 0.12156862745098039); // #1F1F1F
+gfx_rect(0, 0, gfx_w, gfx_h);
+gfx_rect(27, 22, 450, 225);
+
+gfx_set(0.15184313725490198, 0.17184313725490197, 0.19184313725490199);
+gfx_line(27, 247, 477, 247, 1); // horizontal
+// gfx_line(252, 27, 252, 252, 1); // vertical
+gfx_line(93, 88, 252, 247, 1); // l
+gfx_line(411, 88, 252, 247, 1); // r
+gfx_arc(252, 247, 225, -$pi/2, $pi/2, 1);
+
+gfx_line(500, 13, 500, 253);
+gfx_set(0.19607843137254902, 0.2235294117647059, 0.25098039215686274); // #323940
+gfx_line(498, 133, 502, 133);
+
+i = histpos;
+alpha = 0.15 + 0.8 * 0.9999^histsize;
+loop(histsize,
+    histbuf_s[i] || histbuf_m[i] ? (
+        histbuf_m[i] >= 0 ? (
+            gfx_x = 252 + 225 * histbuf_s[i] + 0.5;
+            gfx_y = 247 - 225 * histbuf_m[i] + 0.5;
+            gfx_setpixel(alpha, alpha, alpha);
+        ) : (
+            gfx_x = 252 + 225 * histbuf_s[i] + 0.5;
+            gfx_y = 247 + 225 * histbuf_m[i] + 0.5;
+            gfx_setpixel(alpha, alpha/2, alpha/2);
+        );
+    );
+    i += 1;
+    i >= histsize ? i = 0;
+    
+    alpha = lerp(0.15, alpha, 1/0.9999);
+);
+
+gfx_set(0.5568627450980392, 0.5568627450980392, 0.5568627450980392); // #8E8E8E
+// lr_factor = 0.7071067811865476 * sin($pi / 4 - atan2(lrms, rrms));
+lr_factor = (sqrt(rss) - sqrt(lss)) / sqrt(lss + rss);
+last_lr_factor < lr_factor ?
+    gfx_gradrect(
+        252 + 225 * last_lr_factor + 0.5, 249, w = 225 * (lr_factor - last_lr_factor) + 1, 5,
+        0.12156862745098039, 0.12156862745098039, 0.12156862745098039, 1,
+        d = 0.43529411764705883 / w, d, d, 0
+    ) :
+    gfx_gradrect(
+        252 + 225 * lr_factor + 0.5, 249, w = 225 * (last_lr_factor - lr_factor) + 1, 5,
+        0.5568627450980392, 0.5568627450980392, 0.5568627450980392, 1,
+        d = -0.43529411764705883 / w, d, d, 0
+    );
+gfx_rect(252 + 225 * lr_factor - 0.5, 249, 3, 5);
+last_lr_factor = lr_factor;
+
+ms_factor = lerp(ms_factor, (sqrt(mss) - sqrt(sss)) / sqrt(mss + sss), 0.6);
+ms_factor_ = -0.25 * ms_factor^3 + 1.25 * ms_factor;
+last_ms_factor_ < ms_factor_ ?
+    gfx_gradrect(
+        498, 133 - 120 * ms_factor_ + 0.5, 5, h = 120 * (ms_factor_ - last_ms_factor_) + 1,
+        0.5568627450980392, 0.5568627450980392, 0.5568627450980392, 0.75,
+        0, 0, 0, 0,
+        d = -0.43529411764705883 / h, d, d, -0.75/h
+    ) :
+    gfx_gradrect(
+        498, 133 - 120 * last_ms_factor_ + 0.5, 5, h = 120 * (last_ms_factor_ - ms_factor_) + 1,
+        0.12156862745098039, 0.12156862745098039, 0.12156862745098039, 0,
+        0, 0, 0, 0,
+        d = 0.43529411764705883 / h, d, d, 0.75/h
+    );
+gfx_rect(498, 133 - 120 * ms_factor_ - 0.5, 5, 3);
+last_ms_factor_ = ms_factor_;
+
+lss = 0;
+rss = 0;
+mss = 0;
+sss = 0;
+
