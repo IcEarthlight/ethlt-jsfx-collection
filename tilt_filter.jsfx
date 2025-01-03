@@ -1,0 +1,157 @@
+desc: Tilt Filter
+author: Earthlight
+version: 0.2
+
+slider1:center_freq=1000<20,20000,1:log=1000>Center Frequency (Hz)
+slider2:slope=0<-24,24,0.1>Slope (dB/oct)
+slider3:num_filters=5<1,5,1>Number of Filter Pairs
+
+@init
+function shelf_init() (
+  this.x1 = this.x2 = this.y1 = this.y2 = 0;
+  this.b0 = this.b1 = this.b2 = this.a1 = this.a2 = 0;
+);
+
+function shelf_set_coeff(freq, gain, q, is_high) local(w0, A, alpha, temp, a0) (
+  // Bypass if frequency is above Nyquist
+  freq >= srate/3 ? (
+    this.b0 = 1;
+    this.b1 = this.b2 = this.a1 = this.a2 = 0;
+  ) : (
+    w0 = 2 * $pi * freq / srate;
+    A = pow(10, gain/20);
+    alpha = sin(w0) / (2 * q);
+    
+    is_high ? (
+      // Highshelf
+      temp = 2 * sqrt(A) * alpha;
+      this.b0 = A * ((A + 1) + (A - 1) * cos(w0) + temp);
+      this.b1 = -2 * A * ((A - 1) + (A + 1) * cos(w0));
+      this.b2 = A * ((A + 1) + (A - 1) * cos(w0) - temp);
+      a0 = (A + 1) - (A - 1) * cos(w0) + temp;
+      this.a1 = 2 * ((A - 1) - (A + 1) * cos(w0));
+      this.a2 = (A + 1) - (A - 1) * cos(w0) - temp;
+    ) : (
+      // Lowshelf
+      temp = 2 * sqrt(A) * alpha;
+      this.b0 = A * ((A + 1) - (A - 1) * cos(w0) + temp);
+      this.b1 = 2 * A * ((A - 1) - (A + 1) * cos(w0));
+      this.b2 = A * ((A + 1) - (A - 1) * cos(w0) - temp);
+      a0 = (A + 1) + (A - 1) * cos(w0) + temp;
+      this.a1 = -2 * ((A - 1) + (A + 1) * cos(w0));
+      this.a2 = (A + 1) + (A - 1) * cos(w0) - temp;
+    );
+    
+    // Normalize coefficients
+    this.b0 /= a0;
+    this.b1 /= a0;
+    this.b2 /= a0;
+    this.a1 /= a0;
+    this.a2 /= a0;
+  );
+);
+
+function shelf_process(input) (
+  output = this.b0 * input + this.b1 * this.x1 + this.b2 * this.x2 - this.a1 * this.y1 - this.a2 * this.y2;
+  this.x2 = this.x1;
+  this.x1 = input;
+  this.y2 = this.y1;
+  this.y1 = output;
+  output;
+);
+
+// Initialize filters
+ls1_l.shelf_init(); hs1_l.shelf_init();
+ls1_r.shelf_init(); hs1_r.shelf_init();
+
+ls2_l.shelf_init(); hs2_l.shelf_init();
+ls2_r.shelf_init(); hs2_r.shelf_init();
+
+ls3_l.shelf_init(); hs3_l.shelf_init();
+ls3_r.shelf_init(); hs3_r.shelf_init();
+
+ls4_l.shelf_init(); hs4_l.shelf_init();
+ls4_r.shelf_init(); hs4_r.shelf_init();
+
+ls5_l.shelf_init(); hs5_l.shelf_init();
+ls5_r.shelf_init(); hs5_r.shelf_init();
+
+@slider
+gain_factor = -slope * 1.1799213582978993; // Split the tilt gain between active filter pairs
+
+// Set coefficients for all filters
+ls1_l.shelf_set_coeff(center_freq,  gain_factor, 0.3711131477643959, 0);
+ls1_r.shelf_set_coeff(center_freq,  gain_factor, 0.3711131477643959, 0);
+hs1_l.shelf_set_coeff(center_freq, -gain_factor, 0.3711131477643959, 1);
+hs1_r.shelf_set_coeff(center_freq, -gain_factor, 0.3711131477643959, 1);
+
+num_filters >= 2 ? (
+  ls2_l.shelf_set_coeff(center_freq,  gain_factor, 0.08338842525852178, 0);
+  ls2_r.shelf_set_coeff(center_freq,  gain_factor, 0.08338842525852178, 0);
+  hs2_l.shelf_set_coeff(center_freq, -gain_factor, 0.08338842525852178, 1);
+  hs2_r.shelf_set_coeff(center_freq, -gain_factor, 0.08338842525852178, 1);
+);
+
+num_filters >= 3 ? (
+  ls3_l.shelf_set_coeff(center_freq,  gain_factor, 0.016428653781632968, 0);
+  ls3_r.shelf_set_coeff(center_freq,  gain_factor, 0.016428653781632968, 0);
+  hs3_l.shelf_set_coeff(center_freq, -gain_factor, 0.016428653781632968, 1);
+  hs3_r.shelf_set_coeff(center_freq, -gain_factor, 0.016428653781632968, 1);
+);
+
+num_filters >= 4 ? (
+  ls4_l.shelf_set_coeff(center_freq,  gain_factor, 0.0034885559503153953, 0);
+  ls4_r.shelf_set_coeff(center_freq,  gain_factor, 0.0034885559503153953, 0);
+  hs4_l.shelf_set_coeff(center_freq, -gain_factor, 0.0034885559503153953, 1);
+  hs4_r.shelf_set_coeff(center_freq, -gain_factor, 0.0034885559503153953, 1);
+);
+
+num_filters >= 5 ? (
+  ls5_l.shelf_set_coeff(center_freq,  gain_factor, 0.0000000001424676912618063, 0);
+  ls5_r.shelf_set_coeff(center_freq,  gain_factor, 0.0000000001424676912618063, 0);
+  hs5_l.shelf_set_coeff(center_freq, -gain_factor, 0.0000000001424676912618063, 1);
+  hs5_r.shelf_set_coeff(center_freq, -gain_factor, 0.0000000001424676912618063, 1);
+);
+
+@sample
+
+output_l = spl0;
+output_r = spl1;
+
+num_filters >= 1 ? (
+  output_l = ls1_l.shelf_process(output_l);
+  output_r = ls1_r.shelf_process(output_r);
+  output_l = hs1_l.shelf_process(output_l);
+  output_r = hs1_r.shelf_process(output_r);
+);
+
+num_filters >= 2 ? (
+  output_l = ls2_l.shelf_process(output_l);
+  output_r = ls2_r.shelf_process(output_r);
+  output_l = hs2_l.shelf_process(output_l);
+  output_r = hs2_r.shelf_process(output_r);
+);
+
+num_filters >= 3 ? (
+  output_l = ls3_l.shelf_process(output_l);
+  output_r = ls3_r.shelf_process(output_r);
+  output_l = hs3_l.shelf_process(output_l);
+  output_r = hs3_r.shelf_process(output_r);
+);
+
+num_filters >= 4 ? (
+  output_l = ls4_l.shelf_process(output_l);
+  output_r = ls4_r.shelf_process(output_r);
+  output_l = hs4_l.shelf_process(output_l);
+  output_r = hs4_r.shelf_process(output_r);
+);
+
+num_filters >= 5 ? (
+  output_l = ls5_l.shelf_process(output_l);
+  output_r = ls5_r.shelf_process(output_r);
+  output_l = hs5_l.shelf_process(output_l);
+  output_r = hs5_r.shelf_process(output_r);
+);
+
+spl0 = output_l;
+spl1 = output_r;
