@@ -7,6 +7,7 @@ slider2:asym=0<-6,3,0.01:log=1.5>Asymmetry Amount
 slider3:dist=0<0,1,0.01>Distortion Amount
 slider4:satr=0<0,1,0.01>Saturation Amount
 slider5:sclp=0<-32,0,0.1:log=-6>Softclip Threshold (dB)
+slider6:postfac=1<0,1,0.05>Post-Factor
 
 @init
 
@@ -18,6 +19,7 @@ last_asym = asym;
 last_dist = dist;
 last_satr = satr;
 last_sclp_fac = 2 ^ (sclp/6);
+last_postfac = postfac;
 
 @slider
 
@@ -33,6 +35,7 @@ d_asym = (asym - last_asym) / samplesblock;
 d_dist = (dist - last_dist) / samplesblock;
 d_satr = (satr - last_satr) / samplesblock;
 d_sclp_fac = (sclp_fac - last_sclp_fac) / samplesblock;
+d_postfac = (postfac - last_postfac) / sampleblock;
 
 @sample
 
@@ -41,6 +44,7 @@ last_asym += d_asym;
 last_dist += d_dist;
 last_satr += d_satr;
 last_sclp_fac += d_sclp_fac;
+last_postfac += d_postfac;
 
 
 spl0 *= last_pregain_fac;
@@ -77,6 +81,9 @@ satr ? (
     spl0 = sin(spl0 * last_satr / 2 * $pi) / temp1;
     spl1 = sin(spl1 * last_satr / 2 * $pi) / temp1;
 );
+
+spl0 *= last_postfac;
+spl1 *= last_postfac;
 
 @gfx 432 240
 
