@@ -2,14 +2,22 @@ desc: Disturation
 author: Earthlight
 version: 1.2
 
-slider1:pregain=0<-12,12,0.1>Pre-Gain (dB)
-slider2:asym=0<-6,3,0.01:log=1.5>Asymmetry Amount
-slider3:dist=0<0,1,0.01>Distortion Amount
-slider4:satr=0<0,1,0.01>Saturation Amount
-slider5:sclp=0<-32,0,0.1:log=-6>Softclip Threshold (dB)
-slider6:postfac=1<0,1,0.05>Post-Factor
+slider1:major_version=1<0,10,1>-Major Version
+slider2:pregain=0<-12,12,0.1>Pre-Gain (dB)
+slider3:asym=0<-6,3,0.01:log=1.5>Asymmetry Amount
+slider4:dist=0<0,1,0.01>Distortion Amount
+slider5:satr=0<0,1,0.01>Saturation Amount
+slider6:tube=0<0,1,0.01>Tube Saturation
+slider7:sclp=0<-32,0,0.1:log=-6>Softclip Threshold (dB)
+slider8:postfac=1<0,1,0.05>Post-Factor
 
 @init
+
+major_version == 0 ? (
+    postfac = sclp;
+    sclp = tube;
+    tube = 0;
+);
 
 pos_peak = 0;
 neg_peak = 0;
