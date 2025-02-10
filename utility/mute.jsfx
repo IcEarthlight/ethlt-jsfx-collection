@@ -1,4 +1,6 @@
 desc:Mute
+author: Earthlight
+version: 0.0
 
 slider1:switch=0<0, 1, 1>Switch
 
