@@ -1,6 +1,21 @@
 desc: Disturation
 author: Earthlight
 version: 1.2
+about:
+  # Disturation
+  
+  A versatile distortion and saturation effect that combines multiple types of waveshaping:
+  - Asymmetric waveshaping
+  - Hard/soft clipping
+  - Tube-style saturation
+  - Distortion with variable character
+
+changelog:
+  v1.2
+  - Added downward compatibility
+  - Added visual feedback for post-factor
+
+links: https://github.com/Earthlight/ethlt-jsfx-collection
 
 slider1:major_version=1<0,10,1>-Major Version
 slider2:pregain=0<-12,12,0.1>Pre-Gain (dB)

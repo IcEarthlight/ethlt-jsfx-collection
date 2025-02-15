@@ -1,88 +1,88 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="Earthlight Jsfx Collection" commit="296b2765e825e194a81458d62ffda0667f3862b8">
-  <category name="analysis">
-    <reapack name="imspace.jsfx" type="effect" desc="ImSpace">
-      <version name="1.0" author="Earthlight" time="2025-02-14T11:27:59Z">
-        <source>https://github.com/IcEarthlight/ethlt-jsfx-collection/raw/55165634524d06299da636ead930334c08a27532/analysis/imspace.jsfx</source>
-      </version>
-    </reapack>
-    <reapack name="multispect.jsfx" type="effect" desc="MultiSpect">
-      <version name="1.0" author="Earthlight" time="2025-02-14T11:27:59Z">
-        <source>https://github.com/IcEarthlight/ethlt-jsfx-collection/raw/55165634524d06299da636ead930334c08a27532/analysis/multispect.jsfx</source>
-      </version>
-    </reapack>
-  </category>
-  <category name="dynamics">
-    <reapack name="cheese_n_bread.jsfx" type="effect" desc="Cheese &amp; Bread">
-      <version name="1.0" author="Earthlight" time="2025-02-14T11:27:59Z">
-        <source>https://github.com/IcEarthlight/ethlt-jsfx-collection/raw/55165634524d06299da636ead930334c08a27532/dynamics/cheese_n_bread.jsfx</source>
-      </version>
-    </reapack>
-  </category>
-  <category name="filters">
-    <reapack name="pixeled_lowpass.jsfx" type="effect" desc="Pixeled Lowpass">
-      <version name="1.0" author="Earthlight" time="2025-02-14T11:27:59Z">
-        <source>https://github.com/IcEarthlight/ethlt-jsfx-collection/raw/55165634524d06299da636ead930334c08a27532/filters/pixeled_lowpass.jsfx</source>
-      </version>
-    </reapack>
-    <reapack name="tilt_filter.jsfx" type="effect" desc="Tilt Filter">
-      <version name="0.2" author="Earthlight" time="2025-02-14T11:27:59Z">
-        <source>https://github.com/IcEarthlight/ethlt-jsfx-collection/raw/55165634524d06299da636ead930334c08a27532/filters/tilt_filter.jsfx</source>
-      </version>
-    </reapack>
-  </category>
-  <category name="midi">
-    <reapack name="midi_pump.jsfx" type="effect" desc="MidiPump">
-      <version name="0.0" author="Earthlight" time="2025-02-14T11:27:59Z">
-        <source>https://github.com/IcEarthlight/ethlt-jsfx-collection/raw/55165634524d06299da636ead930334c08a27532/midi/midi_pump.jsfx</source>
-      </version>
-    </reapack>
-  </category>
-  <category name="modulation">
-    <reapack name="multyply.jsfx" type="effect" desc="Multyply">
-      <version name="1.0" author="Earthlight" time="2025-02-14T11:27:59Z">
-        <source>https://github.com/IcEarthlight/ethlt-jsfx-collection/raw/55165634524d06299da636ead930334c08a27532/modulation/multyply.jsfx</source>
-      </version>
-    </reapack>
-    <reapack name="vibrato.jsfx" type="effect" desc="Vibrato">
-      <version name="1.0" author="Earthlight" time="2025-02-14T11:27:59Z">
-        <source>https://github.com/IcEarthlight/ethlt-jsfx-collection/raw/55165634524d06299da636ead930334c08a27532/modulation/vibrato.jsfx</source>
-      </version>
-    </reapack>
-  </category>
-  <category name="synthesis">
-    <reapack name="ultra_saw.jsfx" type="effect" desc="UltraSaw">
-      <version name="0.0" author="Earthlight" time="2025-02-14T11:30:30Z">
-        <source>https://github.com/IcEarthlight/ethlt-jsfx-collection/raw/00260d6348707f08ca376a42f76d0ceb2ab8e4f8/synthesis/ultra_saw.jsfx</source>
-      </version>
-    </reapack>
-  </category>
-  <category name="utility">
+<index version="1" name="ethlt" commit="3d2fab5e60bfdfefa9ebe8daec13ed437b81d3ce">
+  <category name=".">
     <reapack name="bass_mono.jsfx" type="effect" desc="BassMono">
-      <version name="1.0" author="Earthlight" time="2025-02-14T11:27:59Z">
-        <source>https://github.com/IcEarthlight/ethlt-jsfx-collection/raw/55165634524d06299da636ead930334c08a27532/utility/bass_mono.jsfx</source>
+      <version name="1.0" author="Earthlight" time="2025-02-17T07:09:10Z">
+        <source>https://github.com/IcEarthlight/ethlt-jsfx-collection/raw/3d2fab5e60bfdfefa9ebe8daec13ed437b81d3ce/bass_mono.jsfx</source>
       </version>
     </reapack>
     <reapack name="bass_tools.jsfx" type="effect" desc="BassTools">
-      <version name="1.0" author="Earthlight" time="2025-02-14T11:27:59Z">
-        <source>https://github.com/IcEarthlight/ethlt-jsfx-collection/raw/55165634524d06299da636ead930334c08a27532/utility/bass_tools.jsfx</source>
+      <version name="1.0" author="Earthlight" time="2025-02-17T07:09:10Z">
+        <source>https://github.com/IcEarthlight/ethlt-jsfx-collection/raw/3d2fab5e60bfdfefa9ebe8daec13ed437b81d3ce/bass_tools.jsfx</source>
+      </version>
+    </reapack>
+    <reapack name="cheese_n_bread.jsfx" type="effect" desc="Cheese &amp; Bread">
+      <version name="1.0" author="Earthlight" time="2025-02-17T07:09:10Z">
+        <source>https://github.com/IcEarthlight/ethlt-jsfx-collection/raw/3d2fab5e60bfdfefa9ebe8daec13ed437b81d3ce/cheese_n_bread.jsfx</source>
+      </version>
+    </reapack>
+    <reapack name="disturation.jsfx" type="effect" desc="Disturation">
+      <metadata>
+        <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 \fmodern Courier;}}
+{\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
+\widowctrl\hyphauto
+
+{\pard \ql \f0 \sa180 \li0 \fi0 \outlinelevel0 \b \fs36 Disturation\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 A versatile distortion and saturation effect that combines multiple types of waveshaping:\par}
+{\pard \ql \f0 \sa0 \li360 \fi-360 \bullet \tx360\tab Asymmetric waveshaping\par}
+{\pard \ql \f0 \sa0 \li360 \fi-360 \bullet \tx360\tab Hard/soft clipping\par}
+{\pard \ql \f0 \sa0 \li360 \fi-360 \bullet \tx360\tab Tube-style saturation\par}
+{\pard \ql \f0 \sa0 \li360 \fi-360 \bullet \tx360\tab Distortion with variable character\sa180\par}
+}
+]]></description>
+      </metadata>
+      <version name="1.2" author="Earthlight" time="2025-02-17T07:09:10Z">
+        <source>https://github.com/IcEarthlight/ethlt-jsfx-collection/raw/3d2fab5e60bfdfefa9ebe8daec13ed437b81d3ce/disturation.jsfx</source>
       </version>
     </reapack>
     <reapack name="impulse_generator.jsfx" type="effect" desc="ImpulseGenerator">
-      <version name="0.0" author="Earthlight" time="2025-02-14T11:27:59Z">
-        <source>https://github.com/IcEarthlight/ethlt-jsfx-collection/raw/55165634524d06299da636ead930334c08a27532/utility/impulse_generator.jsfx</source>
+      <version name="0.0" author="Earthlight" time="2025-02-17T07:09:10Z">
+        <source>https://github.com/IcEarthlight/ethlt-jsfx-collection/raw/3d2fab5e60bfdfefa9ebe8daec13ed437b81d3ce/impulse_generator.jsfx</source>
+      </version>
+    </reapack>
+    <reapack name="imspace.jsfx" type="effect" desc="ImSpace">
+      <version name="1.0" author="Earthlight" time="2025-02-17T07:09:10Z">
+        <source>https://github.com/IcEarthlight/ethlt-jsfx-collection/raw/3d2fab5e60bfdfefa9ebe8daec13ed437b81d3ce/imspace.jsfx</source>
+      </version>
+    </reapack>
+    <reapack name="midi_pump.jsfx" type="effect" desc="MidiPump">
+      <version name="0.0" author="Earthlight" time="2025-02-17T07:09:10Z">
+        <source>https://github.com/IcEarthlight/ethlt-jsfx-collection/raw/3d2fab5e60bfdfefa9ebe8daec13ed437b81d3ce/midi_pump.jsfx</source>
+      </version>
+    </reapack>
+    <reapack name="multispect.jsfx" type="effect" desc="MultiSpect">
+      <version name="1.0" author="Earthlight" time="2025-02-17T07:09:10Z">
+        <source>https://github.com/IcEarthlight/ethlt-jsfx-collection/raw/3d2fab5e60bfdfefa9ebe8daec13ed437b81d3ce/multispect.jsfx</source>
+      </version>
+    </reapack>
+    <reapack name="multyply.jsfx" type="effect" desc="Multyply">
+      <version name="1.0" author="Earthlight" time="2025-02-17T07:09:10Z">
+        <source>https://github.com/IcEarthlight/ethlt-jsfx-collection/raw/3d2fab5e60bfdfefa9ebe8daec13ed437b81d3ce/multyply.jsfx</source>
       </version>
     </reapack>
     <reapack name="mute.jsfx" type="effect" desc="Mute">
-      <version name="0.0" author="Earthlight" time="2025-02-14T11:30:59Z">
-        <source>https://github.com/IcEarthlight/ethlt-jsfx-collection/raw/296b2765e825e194a81458d62ffda0667f3862b8/utility/mute.jsfx</source>
+      <version name="0.0" author="Earthlight" time="2025-02-17T07:09:10Z">
+        <source>https://github.com/IcEarthlight/ethlt-jsfx-collection/raw/3d2fab5e60bfdfefa9ebe8daec13ed437b81d3ce/mute.jsfx</source>
       </version>
     </reapack>
-  </category>
-  <category name="waveshapers">
-    <reapack name="disturation.jsfx" type="effect" desc="Disturation">
-      <version name="1.2" author="Earthlight" time="2025-02-14T11:27:59Z">
-        <source>https://github.com/IcEarthlight/ethlt-jsfx-collection/raw/55165634524d06299da636ead930334c08a27532/waveshapers/disturation.jsfx</source>
+    <reapack name="pixeled_lowpass.jsfx" type="effect" desc="Pixeled Lowpass">
+      <version name="1.0" author="Earthlight" time="2025-02-17T07:09:10Z">
+        <source>https://github.com/IcEarthlight/ethlt-jsfx-collection/raw/3d2fab5e60bfdfefa9ebe8daec13ed437b81d3ce/pixeled_lowpass.jsfx</source>
+      </version>
+    </reapack>
+    <reapack name="tilt_filter.jsfx" type="effect" desc="Tilt Filter">
+      <version name="0.2" author="Earthlight" time="2025-02-17T07:09:10Z">
+        <source>https://github.com/IcEarthlight/ethlt-jsfx-collection/raw/3d2fab5e60bfdfefa9ebe8daec13ed437b81d3ce/tilt_filter.jsfx</source>
+      </version>
+    </reapack>
+    <reapack name="ultra_saw.jsfx" type="effect" desc="UltraSaw">
+      <version name="0.0" author="Earthlight" time="2025-02-17T07:09:10Z">
+        <source>https://github.com/IcEarthlight/ethlt-jsfx-collection/raw/3d2fab5e60bfdfefa9ebe8daec13ed437b81d3ce/ultra_saw.jsfx</source>
+      </version>
+    </reapack>
+    <reapack name="vibrato.jsfx" type="effect" desc="Vibrato">
+      <version name="1.0" author="Earthlight" time="2025-02-17T07:09:10Z">
+        <source>https://github.com/IcEarthlight/ethlt-jsfx-collection/raw/3d2fab5e60bfdfefa9ebe8daec13ed437b81d3ce/vibrato.jsfx</source>
       </version>
     </reapack>
   </category>
