@@ -1,6 +1,12 @@
 desc: ImSpace
 author: Earthlight
 version: 1.0
+about:
+  # ImSpace
+
+  A lightweight visualizer that shows the stereo image and balance of the input signal.
+
+links: https://github.com/Earthlight/ethlt-jsfx-collection
 
 in_pin:left input
 in_pin:right input
