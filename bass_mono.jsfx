@@ -1,6 +1,17 @@
 desc: BassMono
 author: Earthlight
 version: 1.0
+about:
+  # BassMono
+
+  A versatile stereo effect that can achieve a variety of stereo manipulation effects:
+  - Stereoize (Inspired by SerumFX Hyper module)
+  - BassMono (Switchable mono source)
+  - Stereo width control
+  - LR Fix (Dynamically balance left and right channels)
+  - Intuitive Stereo Image Visualization
+
+links: https://github.com/Earthlight/ethlt-jsfx-collection
 
 slider1:stereoize_size=0<0,1,0.05>-Stereoize Size
 slider2:stereoize_amount=0<0,1,0.05>-Stereoize Amount

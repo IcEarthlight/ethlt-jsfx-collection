@@ -4,11 +4,13 @@ version: 1.2
 about:
   # Disturation
   
-  A versatile distortion and saturation effect that combines multiple types of waveshaping:
+  A distortion effect inspired by loser/waveShapingDstr and loser/Saturation, but much more powerful and flexible:
   - Asymmetric waveshaping
   - Hard/soft clipping
   - Tube-style saturation
   - Distortion with variable character
+  - Waveshaping curve and input level visualization
+  - All parameters are smoothly automatable
 
 changelog:
   v1.2
