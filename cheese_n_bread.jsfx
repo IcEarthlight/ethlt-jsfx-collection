@@ -1,6 +1,15 @@
 desc: Cheese & Bread
 author: Earthlight
 version: 1.0
+about:
+  # Cheese & Bread
+
+  A side-chain dynamic manipulator that makes the audio perfectly fit the 'pits' of the sidechain signal, and minimize the dynamic range of the sum of two tracks.
+  - Adjustable threshold, attack and release
+  - Stereo-linked or unlinked
+  - Visual feedback for sidechain waveshape, processed signal, and peaks
+
+links: https://github.com/Earthlight/ethlt-jsfx-collection
 
 slider1:threshold=0<-32,0,0.1:log=-6>Threshold (dB)
 slider2:pregain=0<-6,6,0.1>Pre-Gain (dB)
