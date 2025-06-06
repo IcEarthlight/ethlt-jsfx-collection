@@ -1,8 +1,8 @@
 desc: ImSpace
 author: Earthlight
-version: 1.0
+version: 1.1
 about:
-  # ImSpace
+  # ImSpaceAdd commentMore actions
 
   A lightweight visualizer that shows the stereo image and balance of the input signal.
 
@@ -118,7 +118,12 @@ loop(histsize,
 
 gfx_set(0.5568627450980392, 0.5568627450980392, 0.5568627450980392); // #8E8E8E
 // lr_factor = 0.7071067811865476 * sin($pi / 4 - atan2(lrms, rrms));
-lr_factor = (sqrt(rss) - sqrt(lss)) / sqrt(lss + rss);
+0 < lss + rss ?
+    lr_factor = lerp(
+        lr_factor,
+        tan($pi / 4 * (sqrt(rss) - sqrt(lss)) / sqrt(lss + rss)),
+        0.6
+    );
 last_lr_factor < lr_factor ?
     gfx_gradrect(
         252 + 225 * last_lr_factor + 0.5, 249, w = 225 * (lr_factor - last_lr_factor) + 1, 5,
@@ -133,26 +138,29 @@ last_lr_factor < lr_factor ?
 gfx_rect(252 + 225 * lr_factor - 0.5, 249, 3, 5);
 last_lr_factor = lr_factor;
 
-ms_factor = lerp(ms_factor, (sqrt(mss) - sqrt(sss)) / sqrt(mss + sss), 0.6);
-ms_factor_ = -0.25 * ms_factor^3 + 1.25 * ms_factor;
-last_ms_factor_ < ms_factor_ ?
+0 < mss + sss ?
+    ms_factor = lerp(
+        ms_factor,
+        (sqrt(mss) - sqrt(sss)) / sqrt(mss + sss),
+        0.5
+    );
+last_ms_factor < ms_factor ?
     gfx_gradrect(
-        498, 133 - 120 * ms_factor_ + 0.5, 5, h = 120 * (ms_factor_ - last_ms_factor_) + 1,
+        498, 133 - 120 * ms_factor + 0.5, 5, h = 120 * (ms_factor - last_ms_factor) + 1,
         0.5568627450980392, 0.5568627450980392, 0.5568627450980392, 0.75,
         0, 0, 0, 0,
         d = -0.43529411764705883 / h, d, d, -0.75/h
     ) :
     gfx_gradrect(
-        498, 133 - 120 * last_ms_factor_ + 0.5, 5, h = 120 * (last_ms_factor_ - ms_factor_) + 1,
+        498, 133 - 120 * last_ms_factor + 0.5, 5, h = 120 * (last_ms_factor - ms_factor) + 1,
         0.12156862745098039, 0.12156862745098039, 0.12156862745098039, 0,
         0, 0, 0, 0,
         d = 0.43529411764705883 / h, d, d, 0.75/h
     );
-gfx_rect(498, 133 - 120 * ms_factor_ - 0.5, 5, 3);
-last_ms_factor_ = ms_factor_;
+gfx_rect(498, 133 - 120 * ms_factor - 0.5, 5, 3);
+last_ms_factor = ms_factor;
 
 lss = 0;
 rss = 0;
 mss = 0;
 sss = 0;
-
