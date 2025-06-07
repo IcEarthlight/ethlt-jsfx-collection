@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="ethlt" commit="21dcf684a8856097c87cdde4dec35424da41b57d">
+<index version="1" name="Earthlight" commit="6b0275252e70bc1cce5be7e7e349a5e39edc7062">
   <category name=".">
     <reapack name="bass_mono.jsfx" type="effect" desc="BassMono">
       <metadata>
@@ -76,13 +76,16 @@
 {\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
 \widowctrl\hyphauto
 
-{\pard \ql \f0 \sa180 \li0 \fi0 \outlinelevel0 \b \fs36 ImSpace\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 \outlinelevel0 \b \fs36 ImSpaceAdd commentMore actions\par}
 {\pard \ql \f0 \sa180 \li0 \fi0 A lightweight visualizer that shows the stereo image and balance of the input signal.\par}
 }
 ]]></description>
       </metadata>
       <version name="1.0" author="Earthlight" time="2025-02-17T08:02:36Z">
         <source>https://github.com/IcEarthlight/ethlt-jsfx-collection/raw/2487c0feb43c1a48604f89e65d919eb2811c262d/imspace.jsfx</source>
+      </version>
+      <version name="1.1" author="Earthlight" time="2025-06-06T15:44:05Z">
+        <source>https://github.com/IcEarthlight/ethlt-jsfx-collection/raw/6b0275252e70bc1cce5be7e7e349a5e39edc7062/imspace.jsfx</source>
       </version>
     </reapack>
     <reapack name="midi_pump.jsfx" type="effect" desc="MidiPump">
@@ -171,5 +174,6 @@ ReaPack
 {\pard \ql \f0 \sa180 \li0 \fi0 Other plugins are still under development \u176 ?-\u176 ?\par}
 }
 ]]></description>
+    <link rel="website">https://github.com/IcEarthlight/ethlt-jsfx-collection</link>
   </metadata>
 </index>
